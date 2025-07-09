@@ -14,7 +14,6 @@ from misc.template import MANIFEST_MF, JAVACARD_XML, APPLET_XML
 def clean_hex_string(input_str):
     # Remove content within (), <>, and []
     input_str = re.sub(r"\(.*?\)", "", input_str)
-    input_str = re.sub(r"<.*?>", "", input_str)
     input_str = re.sub(r"\[.*?\]", "", input_str)
 
     # Remove non-hex characters (keep only 0-9 and a-f/A-F)
@@ -118,7 +117,7 @@ def main():
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         json_name = ".".join(args.json_path.split(os.path.sep)[-1].split('.')[:-1])
-        output_file_name = f"output{os.path.sep}{timestamp}_-/{json_name}_json.cap"
+        output_file_name = f"output{os.path.sep}{timestamp}_{json_name}_json.cap"
 
     try:
         input_file = open(args.json_path, "r", encoding="utf-8")

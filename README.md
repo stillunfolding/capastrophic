@@ -1,4 +1,4 @@
-# Capastrophic!
+# [CAP]astrophic!
 Capastrophic is a Java Card toolkit designed specifically for training purposes. It enables parsing Java Card CAP and EXP files into JSON format, facilitates easy manipulation of the JSON representation of CAP files, and supports converting the modified JSON back into CAP files. Finally, it allows installation of these CAP files onto smart cards.
 
 ## Installation
@@ -67,7 +67,73 @@ user@pc:~/capastrophic$ ./cap2json.py -p sample_files/helloworldPackage_2.3.cap
 
 **JSON Manipulation and CAP Generation**
 
+The generated JSON files from CAP files can be converted back into CAP format using the `json2cap.py` script. Before conversion, you may optionally modify the JSON files to alter the CAP file.
 
+Two conversion modes are supported:
+
+- **Shallow** mode (default): For each CAP component in the JSON, the script checks for the `raw_modified` field. If present **and non-empty**, its value is used to regenerate the CAP file. Otherwise, the original `raw` field is used. In this mode, the content of parsed elements (such as `size-u2`) is ignored.
+
+- **Deep** mode: In this mode, the CAP file would be regenerated/reconstructed from the parsed fields (such as `size-u2`), rather than using raw byte values (`raw` or `raw_modified`).
+
+> ⚠️ Note: Deep conversion mode is currently not implemented.
+
+```
+user@pc:~/capastrophic$ ./json2cap.py output/helloworld.json 
+Added Header.cap
+Added Directory.cap
+Added Applet.cap
+Added Import.cap
+Added ConstantPool.cap
+Added Class.cap
+Added Method.cap
+Added StaticField.cap
+Added RefLocation.cap
+Added Descriptor.cap
+Generated CAP file is available under 'output/20250709_120026_helloworld_json.cap'
+```
+
+> [!TIP]
+> To make CAP manipulation easier, the `raw_modified` field supports optional *commenting* and *formatting*. You may:
+> - Use commenting characters: parentheses `()` or brackets `[]` to annotate or add comments. Both the grouping symbols **and the content inside them are removed before conversion**. 
+> - Use separators: spaces, vertical bars `|`, angle brackets `<>` or commas to visually segment the hex string. Angle brackets can also enclose inline comments, but comments must be wrapped within valid grouping characters (see example below). All separator symbols and comments withing `<>` are removed during conversion, while the actual hex byte values remain unaffected.
+> 
+> **Example**
+>
+> ```{
+>  "Header.cap": {
+>    "raw": "01000fdecaffed0102040001054444444444",
+>    "raw_modified": "01 000f decaffed 0102040001<(AID Len)05><(changing AID)5555555555>",
+>    "tag-u1": 1,
+>    "size-u2": 15
+>    ...
+>    ```
+>
+> This allows you to include helpful annotations without affecting parsing. However, note the following:
+> - The content must still represent a valid hex string when grouping and separators are removed.
+> - Newlines, quotation marks, and other characters that would break JSON syntax are not supported.
+
+> [!IMPORTANT]
+> Modifying the hex string (i.e., `raw_modified`) may have side effects.
+For example, changing an AID to a shorter or longer value requires updating related fields, such as the component's `size` field part in the hex-string, to maintain consistency.
+>
+> Failing to do so (unless intentional) can result in corrupted CAP files or unexpected behavior during installation.
+>
+> Some off-card installers perform such consistency checks before installing a CAP file. However, the installer script provided in this project intentionally skips these checks and attempts to load the CAP file as is. This behavior is useful for training and testing purposes, where working with tampered CAP files is required.
+
+> [!TIP]
+> 🛠️ Working with `raw_modified` Field
+>
+> When manipulating the `raw_modified` field, it's important to understand which byte index corresponds to which actual component field in the CAP structure.
+>
+> To make this easier, the parsed fields within each component are named in a way that helps tracing their position in the raw byte array.
+> 
+> Specifically, fields with a fixed size include a suffix such as `-u1`, `-u2`, or `-u4` in their names, indicating that they occupy 1, 2, or 4 bytes, respectively, in the `raw` data.
+> 
+> This naming convention helps to accurately locate and modify specific elements in the raw binary representation.
+
+**CAP Installation**
+
+TBA
 
 ## Supported CAP & EXP File Formats
 Capastrophic supports all CAP and export file format versions introduced by Oracle as of today (July 2025):
@@ -105,3 +171,7 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
     +------------------+-------------+-------------+
     | JC 3.2 Classic   |         2.3 |         2.3 |
     +------------------+-------------+-------------+
+
+## To Do List
+- Adding the `installer.py`
+- Support for **Deep** mode CAP conversion
