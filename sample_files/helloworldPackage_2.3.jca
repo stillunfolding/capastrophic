@@ -1,0 +1,226 @@
+// converted by version  [v25.0]
+// on Tue Jul 08 22:43:17 CEST 2025
+
+.package helloworldPackage {
+	.aid 0x44:0x44:0x44:0x44:0x44;
+	.version 1.0;
+
+	.imports {
+		0xA0:0x0:0x0:0x0:0x62:0x1:0x1 1.6;		//javacard/framework
+		0xA0:0x0:0x0:0x0:0x62:0x0:0x1 1.0;		//java/lang
+	}
+
+	.applet {
+		0x44:0x44:0x44:0x44:0x44:0x1 HelloWorldApplet;
+	}
+
+	.constantPool {
+		// 0
+		staticMethodRef 0.3.0()V;		// javacard/framework/Applet.<init>()V
+		// 1
+		.classRef HelloWorldApplet;
+		// 2
+		staticMethodRef HelloWorldApplet/<init>()V;
+		// 3
+		virtualMethodRef 0.3.2([BSB)V;		// register([BSB)V
+		// 4
+		.classRef 0.7;		// javacard/framework/ISOException
+		// 5
+		virtualMethodRef 0.3.3()Z;		// selectingApplet()Z
+		// 6
+		virtualMethodRef 0.10.1()[B;		// getBuffer()[B
+		// 7
+		staticMethodRef 0.7.1(S)V;		// javacard/framework/ISOException.throwIt(S)V
+	}
+
+	.class public HelloWorldApplet 0 extends 0.3 {		// extends javacard/framework/Applet
+
+		.publicMethodTable 7 {
+			equals(Ljava/lang/Object;)Z;
+			register()V;
+			register([BSB)V;
+			selectingApplet()Z;
+			deselect()V;
+			getShareableInterfaceObject(Ljavacard/framework/AID;B)Ljavacard/framework/Shareable;;
+			select()Z;
+			process(Ljavacard/framework/APDU;)V;
+		}
+
+		.packageMethodTable 0 {
+		}
+
+		.method public <init>()V 0 {
+			.stack 1;
+			.locals 0;
+
+				L0:	aload_0;
+					invokespecial 0;		// javacard/framework/Applet.<init>()V
+					return;
+		}
+
+		.method public static install([BSB)V 1 {
+			.stack 5;
+			.locals 0;
+
+				L0:	new 1;		// helloworldPackage/HelloWorldApplet
+					dup;
+					invokespecial 2;		// helloworldPackage/HelloWorldApplet.<init>()V
+					aload_0;
+					sload_1;
+					sconst_1;
+					sadd;
+					aload_0;
+					sload_1;
+					baload;
+					invokevirtual 3;		// register([BSB)V
+					return;
+		}
+
+		.method public process(Ljavacard/framework/APDU;)V 7 {
+			.stack 3;
+			.locals 2;
+
+			.descriptor	Ljavacard/framework/APDU;	0.10;
+
+				L0:	aload_0;
+					invokevirtual 5;		// selectingApplet()Z
+					ifeq L2;
+				L1:	return;
+				L2:	aload_1;
+					invokevirtual 6;		// getBuffer()[B
+					astore_2;
+					aload_2;
+					sconst_1;
+					baload;
+					stableswitch L27 0 7 L3 L6 L9 L12 L15 L18 L21 L24;
+				L3:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L4:	goto_w L28;
+				L5:	astore_3;
+					sspush 26625;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto_w L28;
+				L6:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L7:	goto_w L28;
+				L8:	astore_3;
+					sspush 26626;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto_w L28;
+				L9:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L10:	goto L28;
+				L11:	astore_3;
+					sspush 26627;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L12:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L13:	goto L28;
+				L14:	astore_3;
+					sspush 26628;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L15:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L16:	goto L28;
+				L17:	astore_3;
+					sspush 26629;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L18:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L19:	goto L28;
+				L20:	astore_3;
+					sspush 26630;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L21:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L22:	goto L28;
+				L23:	astore_3;
+					sspush 26631;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L24:	aload_2;
+					sconst_3;
+					baload;
+					aload_2;
+					sconst_2;
+					baload;
+					sdiv;
+					s2b;
+					sstore_3;
+				L25:	goto L28;
+				L26:	astore_3;
+					sspush 26632;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+					goto L28;
+				L27:	sspush 27904;
+					invokestatic 7;		// javacard/framework/ISOException.throwIt(S)V
+				L28:	return;
+			.exceptionTable {
+				// start_block end_block handler_block catch_type_index
+				L3 L4 L5 4;
+				L6 L7 L8 4;
+				L9 L10 L11 4;
+				L12 L13 L14 4;
+				L15 L16 L17 4;
+				L18 L19 L20 4;
+				L21 L22 L23 4;
+				L24 L25 L26 4;
+			}
+		}
+
+	}
+
+}

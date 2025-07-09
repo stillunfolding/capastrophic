@@ -1,0 +1,8 @@
+
+tests/*
+!tests/.gitkeep
+output/*
+!output/.gitkeep
+__pycache__/
+sdks/*
+specs/*
