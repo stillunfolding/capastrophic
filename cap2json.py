@@ -870,6 +870,10 @@ class CAP2JSON:
         component["size-u2"] = b2i(raw_data.read(2))
         component["magic-u4"] = raw_data.read(4).hex()
 
+        assert (
+            component["magic-u4"] == "decaffed"
+        ), f"Unexpected Magic code: {component['magic-u4']}! Not a valid CAP file."
+
         component["CAP_Format_version-u2"] = self._parse_version(raw_data)
         self.cap_format = component["CAP_Format_version-u2"]
 
