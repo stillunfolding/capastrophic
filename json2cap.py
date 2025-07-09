@@ -93,7 +93,7 @@ class JSON2CAP:
             return False
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Read a JSON representaiton of a CAP file and generate corresponding CAP file."
     )
@@ -110,7 +110,11 @@ def main():
         default="shallow",
         help="Optional conversion mode: shallow mode (default) uses 'raw_modified' or 'raw' elements in JSON file, whereas deep mode uses parsed elements.",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
 
     if not os.path.isfile(args.json_path):
         print(f"Error: File '{args.json_path}' does not exist.")

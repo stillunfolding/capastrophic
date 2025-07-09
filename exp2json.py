@@ -323,7 +323,7 @@ class EXP2JSON:
         return json.dumps(export_file, indent=2)
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Read a EXP file and generate corresponding parsed JSON representation."
     )
@@ -337,7 +337,11 @@ def main():
         "--print", "-p", action="store_true", help="Print the JSON in the output"
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
 
     if not os.path.isfile(args.exp_path):
         print(f"Error: File '{args.exp_path}' does not exist.")
