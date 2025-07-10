@@ -351,7 +351,7 @@ def main():
         output_file_name = args.output
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        exp_name = ".".join(args.exp_path.split(os.path.sep)[-1].split(".")[:-1])
+        exp_name = os.path.splitext(os.path.basename(args.exp_path))[0]
         output_file_name = f"output{os.path.sep}{timestamp}_{exp_name}_exp.json"
 
     try:

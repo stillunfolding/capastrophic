@@ -124,7 +124,7 @@ def main():
         output_file_name = args.output
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        json_name = ".".join(args.json_path.split(os.path.sep)[-1].split(".")[:-1])
+        json_name = os.path.splitext(os.path.basename(args.json_path))[0]
         output_file_name = f"output{os.path.sep}{timestamp}_{json_name}_json.cap"
 
     try:

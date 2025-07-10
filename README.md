@@ -14,6 +14,9 @@ Except for the `installer.py` tool, which requires the `pyscard` and `pycryptodo
 > To install the required libraries, run:
 >
 > `pip install -r requirements.txt`
+> Alternatively, on Linux, to avoid source build dependency errors, you can install the precompiled binaries using APT:
+> `sudo apt install python3-pyscard`
+> `sudo apt install python3-pycryptodome`
 
 ## Usage
 **Parsing CAP and EXP Files**
