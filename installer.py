@@ -73,28 +73,24 @@ def _hexstring_to_byte_seq(parameter):
 
 
 def _hexstring_to_int_list(parameter):
-    return bytes.fromhex(parameter)
-
-
-def _get_sec_level(parameter):
-    SEC_LEVEL_MAP = {
-        "none": const.SCP_SECLEVEL_NO_SECURITY_LEVEL,
-        "mac": const.SCP_SECLEVEL_C_MAC,
-        "enc": const.SCP_SECLEVEL_C_DECRYPTION,
-        "enc_mac": const.SCP_SECLEVEL_C_MAC | const.SCP_SECLEVEL_C_DECRYPTION,
-    }
-    return SEC_LEVEL_MAP[parameter]
-
+    return list(bytes.fromhex(parameter))
 
 def parse_arguments():
     # parent parser with common arguments
     common_parser = argparse.ArgumentParser(add_help=False)
 
     common_parser.add_argument(
+        "-r",
+        "--reader",
+        help="Specify the smart card reader (e.g., 'ACS ACR38')",
+        default=None,
+    )
+
+    common_parser.add_argument(
         "-a",
         "--apdu",
-        type=_hexstring_to_int_list,
         action="append",
+        type=_hexstring_to_int_list,
         help="APDU command to send to the card within secure channel (hex format).",
     )
 
@@ -107,10 +103,10 @@ def parse_arguments():
 
     common_parser.add_argument(
         "--sec-level",
-        choices=["none", "mac", "enc", "enc_mac"],
-        type=_get_sec_level,
-        default="none",
-        help="Security Level for secure channel session",
+        choices=[0, 1, 2, 3],
+        type=int,
+        default=0,
+        help="Security Level for secure channel session (default 0/No-Security)",
     )
 
     common_parser.add_argument(
@@ -321,7 +317,7 @@ def main():
 
     if args.apdu and args.command != "script":
         for apdu in args.apdu:
-            installer.secure_channel_session.send_secure_apdu(list(bytes.fromhex(apdu)))
+            installer.secure_channel_session.send_secure_apdu(apdu)
 
     return True
 
