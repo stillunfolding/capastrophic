@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 
 logger = logging.getLogger("SCP")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler()
 logger_formatter = logging.Formatter(
     "%(asctime)s\t%(levelname)-5s\t%(message)s",
@@ -251,6 +251,11 @@ class SCP:
         self.session_dek = None
         self.last_mac = None
 
+    def reset_session(self):
+        self.sec_level = 0
+        self.mutual_authenticated = False
+        self._clean_keys()
+
     def mutual_auth(
         self,
         sec_level=const.SCP_SECLEVEL_NO_SECURITY_LEVEL,
@@ -329,7 +334,9 @@ class SCP:
 
         return [
             *(
-                components[component_name]
+                components.get(
+                    f"{component_name}.cap", components.get(f"{component_name}.capx")
+                )
                 for component_name in ordering_reference
                 if any(name.startswith(component_name) for name in components.keys())
             ),
@@ -369,7 +376,7 @@ class SCP:
 
         return bytes([prefix]) + length.to_bytes(needed_bytes, byteorder="big")
 
-    def _get_load_chunks(load_file_data_block, chunk_sizes, apply_sizes_to_head):
+    def _get_load_chunks(self, load_file_data_block, chunk_sizes, apply_sizes_to_head):
         DEFAULT_CHUNCK_SIZE = 100  # in bytes
         if not chunk_sizes:
             return [
@@ -405,7 +412,6 @@ class SCP:
                     DEFAULT_CHUNCK_SIZE,
                 )
             ]
-
         if not apply_sizes_to_head:
             return [chunk[::-1] for chunk in chunks[::-1]]
 
@@ -456,11 +462,11 @@ class SCP:
             + cap_aid
             + [len(sd_aid)]
             + sd_aid
-            + len(lfdbh)  # Len(LFDBH)
+            + [len(lfdbh)]  # Len(LFDBH)
             + lfdbh
             + [len(load_params)]
             + load_params
-            + len(token)  # Len(LOAD Token)
+            + [len(token)]  # Len(LOAD Token)
             + token
         )
 
@@ -474,7 +480,7 @@ class SCP:
             cap_file_path, components_order, apply_order_to_head
         )
 
-        load_file_data = "".join(components)
+        load_file_data = b"".join(components)
         load_file_data_block = (
             b"\xc4" + self._get_encoded_length(len(load_file_data)) + load_file_data
         )
@@ -488,7 +494,7 @@ class SCP:
             is_last_chunk = chunk_id == len(chunks) - 1
             p1 = 0x80 if is_last_chunk else 0x00
 
-            load_apdu = [0x80, 0xE8, p1, chunk_id, len(chunk)] + chunk
+            load_apdu = [0x80, 0xE8, p1, chunk_id, len(chunk)] + list(chunk)
 
             _, sw1, sw2 = self.send_secure_apdu(load_apdu)
 
@@ -536,17 +542,17 @@ class SCP:
 
         install_apdu = (
             [0x80, 0xE6, 0x0C, 0x00, lc]
-            + len(cap_aid)
+            + [len(cap_aid)]
             + cap_aid
-            + len(class_aid)
+            + [len(class_aid)]
             + class_aid
-            + len(instance_aid)
+            + [len(instance_aid)]
             + instance_aid
-            + len(priviledges)
+            + [len(priviledges)]
             + priviledges
-            + len(install_params)
+            + [len(install_params)]
             + install_params
-            + len(token)
+            + [len(token)]
             + token
         )
 
@@ -565,7 +571,7 @@ class SCP:
             logger.error("Load failed; Mutual Auth is required!")
             return False
 
-        delete_apdu = [0x80, 0xE4, 0x00, 0x80, len(aid) + 2] + [0x4f, len(aid)] + aid
+        delete_apdu = [0x80, 0xE4, 0x00, 0x80, len(aid) + 2] + [0x4F, len(aid)] + aid
 
         _, sw1, sw2 = self.send_secure_apdu(delete_apdu)
         if (sw1, sw2) != (0x90, 0x00):
