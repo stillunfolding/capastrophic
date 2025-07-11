@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import sys
 from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
@@ -74,6 +75,7 @@ def _hexstring_to_byte_seq(parameter):
 
 def _hexstring_to_int_list(parameter):
     return list(bytes.fromhex(parameter))
+
 
 def parse_arguments():
     # parent parser with common arguments
@@ -272,6 +274,10 @@ def parse_arguments():
         help="Performs Mutual Authentication with the card",
         parents=[common_parser],
     )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
 
     return parser.parse_args()
 
