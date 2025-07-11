@@ -14,8 +14,11 @@ Except for the `installer.py` tool, which requires the `pyscard` and `pycryptodo
 > To install the required libraries, run:
 >
 > `pip install -r requirements.txt`
+>
 > Alternatively, on Linux, to avoid source build dependency errors, you can install the precompiled binaries using APT:
+>
 > `sudo apt install python3-pyscard`
+>
 > `sudo apt install python3-pycryptodome`
 
 ## Usage
@@ -63,10 +66,10 @@ user@pc:~/capastrophic$ ./cap2json.py -p sample_files/helloworldPackage_2.3.cap
 
 > [!TIP]
 > Firefox includes a built-in JSON viewer with convenient features like "Fold All", "Expand All", and syntax highlighting. You can simply drag and drop the generated JSON files into Firefox to view a structured, user-friendly representation of their contents.
-
-<p align="center">
-  <img src="https://github.com/stillunfolding/capastrophic/blob/main/misc/firefox_json_viewer.png?raw=true" alt="Firefox JSON viewer" style="max-width: 100%; height: auto;">
-</p>
+>
+> <p align="center">
+>  <img src="https://github.com/stillunfolding/capastrophic/blob/main/misc/firefox_json_viewer.png?raw=true" alt="Firefox JSON viewer" style="max-width: 100%; height: auto;">
+> </p>
 
 **JSON Manipulation and CAP Generation**
 
