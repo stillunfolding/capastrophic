@@ -1,6 +1,15 @@
 # [CAP]astrophic!
 Capastrophic is a Java Card toolkit designed specifically for training purposes. It enables parsing Java Card CAP and EXP files into JSON format, facilitates easy manipulation of the JSON representation of CAP files, and supports converting the modified JSON back into CAP files. Finally, it allows installation of these CAP files onto smart cards.
 
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Parsing CAP and EXP Files](#parsing-cap-and-exp-files)
+  - [JSON Manipulation and CAP Generation](#json-manipulation-and-cap-generation)
+  - [CAP Installation](#cap-installation)
+- [Supported CAP & EXP File Formats](#supported-cap--exp-file-formats)
+- [Supported SCP Protocols](#supported-scp-protocols)
+- [To Do List](#to-do-list)
+
 ## Installation
 Except for the `installer.py` tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
 
@@ -17,12 +26,10 @@ Except for the `installer.py` tool, which requires the `pyscard` and `pycryptodo
 >
 > Alternatively, on Linux, to avoid source build dependency errors, you can install the precompiled binaries using APT:
 >
-> `sudo apt install python3-pyscard`
->
-> `sudo apt install python3-pycryptodome`
+> `sudo apt install python3-pyscard python3-pycryptodome`
 
 ## Usage
-**Parsing CAP and EXP Files**
+### Parsing CAP and EXP Files
 
 The scripts `cap2json.py` and `exp2json.py` are used to generate JSON representations of CAP and EXP files, respectively. Output files are automatically saved in the output directory with filenames based on the input file name plus a timestamp. You can override the output path and filename by using the `-o` or `--output` option.
 
@@ -71,7 +78,7 @@ user@pc:~/capastrophic$ ./cap2json.py -p sample_files/helloworldPackage_2.3.cap
 >  <img src="https://github.com/stillunfolding/capastrophic/blob/main/misc/firefox_json_viewer.png?raw=true" alt="Firefox JSON viewer" style="max-width: 100%; height: auto;">
 > </p>
 
-**JSON Manipulation and CAP Generation**
+### JSON Manipulation and CAP Generation
 
 The generated JSON files from CAP files can be converted back into CAP format using the `json2cap.py` script. Before conversion, you may optionally modify the JSON files to alter the CAP file.
 
@@ -137,7 +144,7 @@ For example, changing an AID to a shorter or longer value requires updating rela
 > 
 > This naming convention helps to accurately locate and modify specific elements in the raw binary representation.
 
-**CAP Installation**
+### CAP Installation
 
 TBA
 
@@ -178,6 +185,10 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
     | JC 3.2 Classic   |         2.3 |         2.3 |
     +------------------+-------------+-------------+
 
+## Supported SCP Protocols
+- SCP02 (i='15', i='55'; C-MAC on modified APDU)
+
 ## To Do List
-- Adding the `installer.py`
-- Support for **Deep** mode CAP conversion
+- To complete the `installer.py` tool and to add its readme
+- To add support for **Deep** mode CAP conversion
+- To add support for SCP03
