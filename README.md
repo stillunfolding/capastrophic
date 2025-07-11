@@ -148,6 +148,9 @@ For example, changing an AID to a shorter or longer value requires updating rela
 
 TBA
 
+> [!TIP]
+> See examples in [Installer Examples](./docs/EXAMPLES.md).
+
 ## Supported CAP & EXP File Formats
 Capastrophic supports all CAP and export file format versions introduced by Oracle as of today (July 2025):
 
@@ -184,6 +187,10 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
     +------------------+-------------+-------------+
     | JC 3.2 Classic   |         2.3 |         2.3 |
     +------------------+-------------+-------------+
+
+> [!TIP]
+> For detailed information on Java Card defined file structures, see [CAP/EXP Knowledge Base](./docs/JC_FILES_KNOWLEDGE_BASE.md).
+
 
 ## Supported SCP Protocols
 - SCP02 (i='15', i='55'; C-MAC on modified APDU)
