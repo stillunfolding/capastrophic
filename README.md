@@ -1,5 +1,5 @@
 # [CAP]astrophic!
-Capastrophic is a Java Card toolkit designed specifically for training purposes. It enables parsing Java Card CAP and EXP files into JSON format, facilitates easy manipulation of the JSON representation of CAP files, and supports converting the modified JSON back into CAP files. Finally, it allows installation of these CAP files onto smart cards.
+Capastrophic is a JCVM training [and testing] toolkit designed specifically for educational purposes. It enables parsing Java Card CAP (and EXP) files into JSON format, facilitates easy manipulation of the JSON representation of CAP files, and supports converting the modified JSON back into CAP files. Additionally, it allows loading and installation of these CAP/JSON files onto smart cards in a very flexible manner.
 
 - [Installation](#installation)
 - [Usage](#usage)

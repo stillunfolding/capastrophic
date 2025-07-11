@@ -1,10 +1,24 @@
 #!/usr/bin/python3
 
 import argparse
+import logging
 import sys
 from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
+from json2cap import clean_hex_string
+
+logger = logging.getLogger("Installer")
+logger.setLevel(logging.INFO)
+
+stream_handler = logging.StreamHandler()
+logger_formatter = logging.Formatter(
+    "%(asctime)s\t%(levelname)-5s\t[LOGMSG] :::: %(message)s",
+    # "%(asctime)s\t%(levelname)-5s\t%(filename)-21s: %(lineno)-3d\t%(funcName)-25s\t%(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+stream_handler.setFormatter(logger_formatter)
+logger.addHandler(stream_handler)
 
 
 class Installer:
@@ -40,18 +54,21 @@ class Installer:
         apply_order_to_head=True,
         chunk_sizes=[],
         apply_sizes_to_head=True,
+        from_json=False,
     ):
-
-        return self.secure_channel_session.load_cap(
-            cap_file_path,
-            cap_aid,
-            sd_aid,
-            load_params,
-            components_order,
-            apply_order_to_head,
-            chunk_sizes,
-            apply_sizes_to_head,
-        )
+        if from_json:
+            pass
+        else:
+            return self.secure_channel_session.load_cap(
+                cap_file_path,
+                cap_aid,
+                sd_aid,
+                load_params,
+                components_order,
+                apply_order_to_head,
+                chunk_sizes,
+                apply_sizes_to_head,
+            )
 
     def install_applet(
         self,
@@ -69,12 +86,12 @@ class Installer:
         return self.secure_channel_session.delete_content(aid)
 
 
-def _hexstring_to_byte_seq(parameter):
-    return bytes.fromhex(parameter)
+def _hexstring_to_byte_seq(hexstring):
+    return bytes.fromhex(hexstring)
 
 
-def _hexstring_to_int_list(parameter):
-    return list(bytes.fromhex(parameter))
+def _hexstring_to_int_list(hexstring):
+    return list(bytes.fromhex(hexstring))
 
 
 def parse_arguments():
@@ -90,8 +107,9 @@ def parse_arguments():
 
     common_parser.add_argument(
         "-a",
-        "--apdu",
-        action="append",
+        "--apdus",
+        nargs="+",
+        default=[],
         type=_hexstring_to_int_list,
         help="APDU command to send to the card within secure channel (hex format).",
     )
@@ -148,8 +166,9 @@ def parse_arguments():
 
     parser.add_argument(
         "-a",
-        "--apdu",
-        action="append",
+        "--apdus",
+        nargs="+",
+        default=[],
         type=_hexstring_to_int_list,
         help="APDU command to send to the card without secure channel (hex format).",
     )
@@ -163,9 +182,9 @@ def parse_arguments():
 
     # Load command
     load_parser = subparsers.add_parser(
-        "load", help="Load a CAP file to the Java card", parents=[common_parser]
+        "load", help="Load a CAP/JSON file to the Java card", parents=[common_parser]
     )
-    load_parser.add_argument("cap_file", help="Path to the CAP file to be loaded")
+    load_parser.add_argument("file", help="Path to the CAP/JSON file to be loaded")
     load_parser.add_argument(
         "-p",
         "--package-aid",
@@ -176,19 +195,24 @@ def parse_arguments():
     load_parser.add_argument(
         "--asd-aid",
         type=_hexstring_to_int_list,
-        help="Associated Security Domain AID (hex), defaults to CM/current-SD AID",
+        default=[],
+        help="Associated Security Domain AID (in hex; default: CM/current-SD AID",
     )
+
     load_parser.add_argument(
         "--load-params",
         type=_hexstring_to_int_list,
+        default="",
         help="load parameters (in hex; optional)",
     )
 
     load_parser.add_argument(
         "-o",
         "--components-order",
+        type=str,
+        nargs="+",
         default=[],
-        help="list of component names specifying the order of load",
+        help="list of component names specifying the order of initial or last components in load process",
     )
 
     load_parser.add_argument(
@@ -201,8 +225,10 @@ def parse_arguments():
     load_parser.add_argument(
         "-s",
         "--chunk-sizes",
+        type=int,
+        nargs="+",
         default=[],
-        help="list of sizes for the chunks of data in LOAD commands",
+        help="list of integers for the sizes of initial or last chunks of LOAD commands",
     )
 
     load_parser.add_argument(
@@ -210,6 +236,35 @@ def parse_arguments():
         choices=["head", "tail"],
         default="head",
         help="Indicates whether the sizes provided in --chunk-sizes specifies heading or trailing LOAD commands sizes",
+    )
+
+    load_parser.add_argument(
+        "-c",
+        "--class-aid",
+        type=_hexstring_to_int_list,
+        help="AID of the applet class to instantiate after loading. "
+        "Must be used in combination with -i/--instance-aid. "
+        "If omitted, the CAP is loaded but no applet is instantiated. ",
+    )
+
+    load_parser.add_argument(
+        "-i" "--instance-aid",
+        type=_hexstring_to_int_list,
+        help="AID of the applet to instantiate after loading. "
+        "Must be used in combination with -c/--class-aid. "
+        "If omitted, the CAP is loaded but no applet is instantiated. ",
+    )
+    load_parser.add_argument(
+        "--privileges",
+        default="00",
+        type=_hexstring_to_int_list,
+        help="Privileges (in hex; default: 00)",
+    )
+    load_parser.add_argument(
+        "--install-params",
+        type=_hexstring_to_int_list,
+        default="",
+        help="Installation parameters (in hex; default: nothing)",
     )
 
     # Install command
@@ -223,28 +278,32 @@ def parse_arguments():
         "--package-aid",
         type=_hexstring_to_int_list,
         required=True,
-        help="AID of the package containing applet class",
+        help="AID of the package containing applet class (in hex)",
     )
     install_parser.add_argument(
         "-c",
         "--class-aid",
         type=_hexstring_to_int_list,
         required=True,
-        help="AID of the applet class to be instanciated",
+        help="AID of the applet class to be instanciated (in hex)",
     )
     install_parser.add_argument(
-        "-i", "--instance-aid", type=_hexstring_to_int_list, help="Applet instance AID"
+        "-i",
+        "--instance-aid",
+        type=_hexstring_to_int_list,
+        help="Applet instance AID (in hex; default: applet's class AID)",
+    )
+    install_parser.add_argument(
+        "--privileges",
+        default="00",
+        type=_hexstring_to_int_list,
+        help="Privileges (in hex; default: 00)",
     )
     install_parser.add_argument(
         "--install-params",
         type=_hexstring_to_int_list,
-        help="Installation parameters (in hex)",
-    )
-    install_parser.add_argument(
-        "--privileges",
-        default="04",
-        type=_hexstring_to_int_list,
-        help="Privileges (in hex, optional)",
+        default="",
+        help="Installation parameters (in hex; default: nothing)",
     )
 
     # Delete command
@@ -307,10 +366,39 @@ def main():
             pass  # already done above
 
         case "load":
-            pass
+            if installer.load_cap(
+                args.file,
+                args.package_aid,
+                args.asd_aid,  # associate security domain
+                args.load_params,
+                args.components_order,
+                args.order_position == "head",
+                args.chunk_sizes,
+                args.size_position == "head",
+                args.file.lower().endswith(".json"),
+            ):
+                if args.class_aid and args.instance_aid:  # both arguments provided
+                    return installer.install_applet(
+                        args.package_aid,
+                        args.class_aid,
+                        instance_aid,
+                        args.privileges,
+                        args.install_params,
+                    )
+                elif args.class_aid != args.instance_aid:  # one argument not provided
+                    logger.error(
+                        f"Installation requires both --class-aid and --instance-aid to be specified."
+                    )
 
         case "install":
-            pass
+            instance_aid = args.instance_aid if args.instance_aid else args.class_aid
+            installer.install_applet(
+                args.package_aid,
+                args.class_aid,
+                instance_aid,
+                args.privileges,
+                args.install_params,
+            )
 
         case "delete":
             installer.delete_content(args.aid)
@@ -321,8 +409,17 @@ def main():
         case "script":
             pass
 
-    if args.apdu and args.command != "script":
-        for apdu in args.apdu:
+    if args.apdus:
+        for apdu in args.apdus:
+            if (
+                apdu[:3] == [0x00, 0xA4, 0x04]
+                and installer.secure_channel_session.sec_level
+            ):  # Select APDU
+                logger.info(
+                    "SELECT APDU received. Secure channel session security level reset to 'No Security'."
+                )
+                installer.secure_channel_session.reset_session()
+
             installer.secure_channel_session.send_secure_apdu(apdu)
 
     return True

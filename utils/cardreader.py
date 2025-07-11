@@ -4,7 +4,7 @@ from smartcard.util import toHexString
 from smartcard.scard import SCARD_UNPOWER_CARD
 
 logger = logging.getLogger("CardReader")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()
 logger_formatter = logging.Formatter(
@@ -65,6 +65,8 @@ class CardReader:
                                 "\nSelect reader index (-1 to rescan, -2 to exit): "
                             ).strip()
                         )
+                        print()
+                        
                         if index == -2:
                             return False
                         elif index == -1:
