@@ -57,7 +57,8 @@ class Installer:
         from_json=False,
     ):
         if from_json:
-            pass
+            logger.error("Load from JSON not implemented yet!")
+            return False
         else:
             return self.secure_channel_session.load_cap(
                 cap_file_path,
@@ -81,6 +82,30 @@ class Installer:
         return self.secure_channel_session.install_applet(
             cap_aid, class_aid, instance_aid, priviledges, install_params
         )
+
+    def list_content(self, deprecated_data_structure=False):
+        applications_info, packages_info = self.secure_channel_session.list_content(
+            deprecated_data_structure
+        )
+
+        print()
+        print("::: Card Content :::\n")
+        for applet in applications_info:
+            aid, lifecycle, privilege, assiciated_package = applet
+            print(
+                f"APP: {bytes(aid).hex().upper()} (LC: {lifecycle}, Priv: {privilege})\n"
+            )
+            if assiciated_package:
+                print(f"\tPKG: {bytes(assiciated_package).hex().upper()}")
+
+        for package in packages_info:
+            aid, lifecycle, applet_classes_aids, version = package
+            print(
+                f"PKG: {bytes(aid).hex().upper()} (LC: {lifecycle}, Version: {version})"
+            )
+            for aid in applet_classes_aids:
+                print(f"\tAPP: {bytes(aid).hex().upper()}")
+            print()
 
     def delete_content(self, aid):
         return self.secure_channel_session.delete_content(aid)
@@ -125,8 +150,8 @@ def parse_arguments():
         "--sec-level",
         choices=[0, 1, 2, 3],
         type=int,
-        default=0,
-        help="Security Level for secure channel session (default 0/No-Security)",
+        default=1,
+        help="Security Level for secure channel session (default 1/C-MAC)",
     )
 
     common_parser.add_argument(
@@ -238,21 +263,23 @@ def parse_arguments():
         help="Indicates whether the sizes provided in --chunk-sizes specifies heading or trailing LOAD commands sizes",
     )
 
+    load_parser.add_argument("--install", action='store_true', help="Instanciate the applet after loading.")
+
     load_parser.add_argument(
         "-c",
         "--class-aid",
         type=_hexstring_to_int_list,
         help="AID of the applet class to instantiate after loading. "
-        "Must be used in combination with -i/--instance-aid. "
-        "If omitted, the CAP is loaded but no applet is instantiated. ",
+        "Mandatory if --install is present. ",
     )
 
     load_parser.add_argument(
-        "-i" "--instance-aid",
+        "-i",
+        "--instance-aid",
         type=_hexstring_to_int_list,
-        help="AID of the applet to instantiate after loading. "
+        help="AID for the applet instance to be installed after load. "
         "Must be used in combination with -c/--class-aid. "
-        "If omitted, the CAP is loaded but no applet is instantiated. ",
+        "If omitted, AID provided in --class-aid is used instead. ",
     )
     load_parser.add_argument(
         "--privileges",
@@ -334,11 +361,30 @@ def parse_arguments():
         parents=[common_parser],
     )
 
+    # List command
+    delete_parser = subparsers.add_parser(
+        "list",
+        help="List loaded packages and installed applets on the card",
+        parents=[common_parser],
+    )
+    delete_parser.add_argument(
+        "-d",
+        "--deprecated-struct",
+        action="store_true",
+        help="GET STATUS for card contents with deprecated data structure (P2.B2=0)",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.install:
+        if not args.class_aid:
+            parser.error("--install requires --class-aid to be specified.")
+
+    return args
 
 
 def main():
@@ -377,7 +423,8 @@ def main():
                 args.size_position == "head",
                 args.file.lower().endswith(".json"),
             ):
-                if args.class_aid and args.instance_aid:  # both arguments provided
+                if args.install:
+                    instance_aid = args.instance_aid if args.instance_aid else args.class_aid
                     return installer.install_applet(
                         args.package_aid,
                         args.class_aid,
@@ -385,9 +432,9 @@ def main():
                         args.privileges,
                         args.install_params,
                     )
-                elif args.class_aid != args.instance_aid:  # one argument not provided
+                elif args.class_aid != args.instance_aid:  # only instance AID provided
                     logger.error(
-                        f"Installation requires both --class-aid and --instance-aid to be specified."
+                        f"Installation requires both --class-aid to be specified."
                     )
 
         case "install":
@@ -404,17 +451,18 @@ def main():
             installer.delete_content(args.aid)
 
         case "list":
-            pass
+            installer.list_content(args.deprecated_struct)
 
         case "script":
-            pass
+            logger.error("Script command not implemented yet!")
 
     if args.apdus:
         for apdu in args.apdus:
+            # ToDo: command's logical channel shall be compared with the secure channel's logical channel
             if (
-                apdu[:3] == [0x00, 0xA4, 0x04]
+                apdu[:3] == [0x00, 0xA4, 0x04]  # Select APDU
                 and installer.secure_channel_session.sec_level
-            ):  # Select APDU
+            ):
                 logger.info(
                     "SELECT APDU received. Secure channel session security level reset to 'No Security'."
                 )

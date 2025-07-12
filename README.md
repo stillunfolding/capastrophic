@@ -196,6 +196,12 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - SCP02 (i='15', i='55'; C-MAC on modified APDU)
 
 ## To Do List
-- To complete the `installer.py` tool and to add its readme
-- To add support for **Deep** mode CAP conversion
-- To add support for SCP03
+- Add "script" command to `installer.py` to execute a sequence of commands
+- Implement support for **Deep mode** CAP file conversion to `json2cap.py`
+- Add SCP03 support to the `scp.py` tool
+- Add common argument loading from a JSON-based config file to `installer.py`
+- Implement JSON file load on card to `installer.py`
+- Add logical-channel awareness to `scp.py`
+- Implement support for package/class AIDs extraction from CAP/JSON for load/install commands for `installer.py`
+- Add implicity CAP/JSON load support to install command for `installer.py`
+- Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs

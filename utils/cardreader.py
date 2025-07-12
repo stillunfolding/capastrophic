@@ -66,7 +66,7 @@ class CardReader:
                             ).strip()
                         )
                         print()
-                        
+
                         if index == -2:
                             return False
                         elif index == -1:

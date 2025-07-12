@@ -3,7 +3,8 @@ import pathlib
 import os
 import secrets
 from Crypto.Cipher import DES3, DES
-from .const import *
+from .const import const
+from .gpregistry import get_parsed_gp_registry_info
 from zipfile import ZipFile
 
 
@@ -564,6 +565,58 @@ class SCP:
             return False
 
         return True
+
+    def list_content(self, deprecated_data_structure=False):
+
+        if not self.mutual_authenticated:
+            logger.error("List Content failed; Mutual Auth is required!")
+            return None
+
+        # data type constains
+        P1_APPLICATIONS_INFO = 0x40
+        P1_PACKAGES_INFO = 0x10
+
+        # retrieval type constants
+        data_struct = 0 if deprecated_data_structure else 2
+        P2_GET_ALL = 0x00 | data_struct
+        P2_GET_NEXT = 0x01 | data_struct
+
+        applications_info, sw1, sw2 = self.send_secure_apdu(
+            [0x80, 0xF2, P1_APPLICATIONS_INFO, P2_GET_ALL, 0x02, 0x4F, 0x00]
+        )
+        while (sw1, sw2) == (0x63, 0x10):
+            get_status_applets_apdu = [
+                0x80,
+                0xF2,
+                P1_APPLICATIONS_INFO,
+                P2_GET_NEXT,
+                0x02,
+                0x4F,
+                0x00,
+            ]
+            next_info, sw1, sw2 = self.send_secure_apdu(get_status_applets_apdu)
+            applications_info += next_info
+
+        packages_info, sw1, sw2 = self.send_secure_apdu(
+            [0x80, 0xF2, P1_PACKAGES_INFO, P2_GET_ALL, 0x02, 0x4F, 0x00]
+        )
+        while (sw1, sw2) == (0x63, 0x10):
+            get_status_packages_apdu = [
+                0x80,
+                0xF2,
+                P1_PACKAGES_INFO,
+                P2_GET_NEXT,
+                0x02,
+                0x4F,
+                0x00,
+            ]
+            next_info, sw1, sw2 = self.send_secure_apdu(get_status_packages_apdu)
+            packages_info += next_info
+
+        applications_info, packages_info = get_parsed_gp_registry_info(
+            applications_info, packages_info
+        )
+        return applications_info, packages_info
 
     def delete_content(self, aid):
 

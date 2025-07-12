@@ -6,3 +6,4 @@ output/*
 __pycache__/
 sdks/*
 specs/*
+applets/HelloWorld/build/
