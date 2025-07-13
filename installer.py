@@ -126,10 +126,10 @@ def parse_arguments():
     common_parser = argparse.ArgumentParser(add_help=False)
 
     common_parser.add_argument(
-        "--config",
-        type=Path,
-        default=Path("settings.json"),
-        help="Path to optional JSON config file; containing the value of common arguments",
+        "-x",
+        "--skip-settings",
+        action="store_true",
+        help="Ignore settings.json",
     )
     common_parser.add_argument(
         "-r",
@@ -153,8 +153,8 @@ def parse_arguments():
         "--sec-level",
         choices=[0, 1, 2, 3],
         type=int,
-        default=1,
-        help="Security Level for secure channel session (default: 1/C-MAC)",
+        # default=1
+        help="Security Level for secure channel session (default: 1/C-MAC)",  # default is later after checking settings.json!
     )
     ccm_command_common_parser.add_argument(
         "--sd-aid",
@@ -164,28 +164,28 @@ def parse_arguments():
     )
     ccm_command_common_parser.add_argument(
         "--key-enc",
-        default=const.KEY_40_4F_16B,
+        default="",  # defualt is set to 40...4F after checking settings.json!
         type=_hexstring_to_byte_seq,
-        help="SCP encryption key",
+        help="SCP encryption key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "--key-mac",
-        default=const.KEY_40_4F_16B,
+        default="",  # defualt is set to 40...4F after checking settings.json!
         type=_hexstring_to_byte_seq,
-        help="SCP MAC key",
+        help="SCP MAC key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "--key-dek",
-        default=const.KEY_40_4F_16B,
+        default="",  # defualt is set to 40...4F after checking settings.json!
         type=_hexstring_to_byte_seq,
-        help="SCP DEK key",
+        help="SCP DEK key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "-k",
         "--key",
-        default=const.KEY_40_4F_16B,
+        default="",
         type=_hexstring_to_byte_seq,
-        help="SCP keys (when ENC, MAC, DEK keys are the same)",
+        help="SCP keys (to be used when ENC, MAC, DEK keys are all equal)",
     )
     ccm_command_common_parser.add_argument(
         "-l",
@@ -368,36 +368,50 @@ def parse_arguments():
     return args
 
 
-def load_config(path):
-    if not path.exists():
+def load_settings():
+    settings_path = Path("settings.json")
+    if not settings_path.exists():
         return {}
-    with path.open() as fp:
+    with settings_path.open() as fp:
         return json.load(fp)
-
-
-def merge_settings_into_args(args, settings):
-    if not args.reader and settings["reader"]:
-        args.reader = settings["reader"]
 
 
 def main():
     args = parse_arguments()
-    settings = load_config(args.config)
-    merge_settings_into_args(args, settings)
-
+    settings = load_settings()
     card_connection = CardReader()
-    if not card_connection.connect(reader_name=args.reader):
+    reader_name = args.reader or settings.get("common", {}).get("reader", "")
+    if not card_connection.connect(reader_name):
         return False
 
     installer = Installer(card_connection)
 
     if args.command:
+
+        sec_level = (
+            args.sec_level
+            if args.sec_level is not None
+            else settings.get("common", {}).get("sec_level", 1)
+        )
+
         if not installer.mutual_auth(
-            sec_level=args.sec_level,
-            static_enc=args.key_enc,
-            static_mac=args.key_mac,
-            static_dek=args.key_dek,
-            sd_aid=args.sd_aid,
+            sec_level=sec_level,
+            static_enc=args.key_enc
+            or args.key
+            or bytes.fromhex(
+                settings.get("common", {}).get("key_enc", const.KEY_40_4F_16B)
+            ),
+            static_mac=args.key_mac
+            or args.key
+            or bytes.fromhex(
+                settings.get("common", {}).get("key_mac", const.KEY_40_4F_16B)
+            ),
+            static_dek=args.key_dek
+            or args.key
+            or bytes.fromhex(
+                settings.get("common", {}).get("key_dek", const.KEY_40_4F_16B)
+            ),
+            sd_aid=args.sd_aid or settings.get("common", {}).get("sd_aid", []),
         ):
             card_connection.disconnect()
             return False

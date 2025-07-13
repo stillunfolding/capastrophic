@@ -430,7 +430,7 @@ class SCP:
         apply_sizes_to_head=True,
     ):
         if not pathlib.Path(cap_file_path).exists():
-            logger.error(f"Load faile; {cap_file_path} not found!")
+            logger.error(f"Load failed; {cap_file_path} not found!")
             return False
 
         if not self.is_mutually_authenticated:
