@@ -23,7 +23,7 @@ logger.addHandler(stream_handler)
 class SCP:
     def __init__(self, card_connection):
         self.card_connection = card_connection
-        self.mutual_authenticated = False
+        self.is_mutually_authenticated = False
         self.sec_level = 0
 
         self.static_enc = None
@@ -254,7 +254,7 @@ class SCP:
 
     def reset_session(self):
         self.sec_level = 0
-        self.mutual_authenticated = False
+        self.is_mutually_authenticated = False
         self._clean_keys()
 
     def mutual_auth(
@@ -267,7 +267,7 @@ class SCP:
     ):
 
         self.sec_level = sec_level
-        self.mutual_authenticated = False
+        self.is_mutually_authenticated = False
         self._clean_keys()
 
         if not self.select_isd(sd_aid):
@@ -281,7 +281,7 @@ class SCP:
             return False
 
         if self.external_authenticate(sec_level):
-            self.mutual_authenticated = True
+            self.is_mutually_authenticated = True
             return True
         else:
             return False
@@ -433,7 +433,7 @@ class SCP:
             logger.error(f"Load faile; {cap_file_path} not found!")
             return False
 
-        if not self.mutual_authenticated:
+        if not self.is_mutually_authenticated:
             logger.error("Load failed; Mutual Auth is required!")
             return False
 
@@ -516,7 +516,7 @@ class SCP:
         install_params=[],
     ):
 
-        if not self.mutual_authenticated:
+        if not self.is_mutually_authenticated:
             logger.error("Load failed; Mutual Auth is required!")
             return False
 
@@ -568,7 +568,7 @@ class SCP:
 
     def list_content(self, deprecated_data_structure=False):
 
-        if not self.mutual_authenticated:
+        if not self.is_mutually_authenticated:
             logger.error("List Content failed; Mutual Auth is required!")
             return None
 
@@ -620,7 +620,7 @@ class SCP:
 
     def delete_content(self, aid):
 
-        if not self.mutual_authenticated:
+        if not self.is_mutually_authenticated:
             logger.error("Load failed; Mutual Auth is required!")
             return False
 

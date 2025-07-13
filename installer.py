@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 
 import argparse
+import json
 import logging
 import sys
 from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
 from json2cap import clean_hex_string
+from pathlib import Path
 
 logger = logging.getLogger("Installer")
 logger.setLevel(logging.INFO)
@@ -74,13 +76,13 @@ class Installer:
     def install_applet(
         self,
         cap_aid,  # package AID in compact format
-        class_aid,  # applet AID within a package
+        applet_class_aid,  # applet AID within a package
         instance_aid,  # to be instanciated applet
         priviledges=[],
         install_params=[],
     ):
         return self.secure_channel_session.install_applet(
-            cap_aid, class_aid, instance_aid, priviledges, install_params
+            cap_aid, applet_class_aid, instance_aid, priviledges, install_params
         )
 
     def list_content(self, deprecated_data_structure=False):
@@ -124,90 +126,134 @@ def parse_arguments():
     common_parser = argparse.ArgumentParser(add_help=False)
 
     common_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("settings.json"),
+        help="Path to optional JSON config file; containing the value of common arguments",
+    )
+    common_parser.add_argument(
         "-r",
         "--reader",
         help="Specify the smart card reader (e.g., 'ACS ACR38')",
         default=None,
     )
-
     common_parser.add_argument(
         "-a",
         "--apdus",
         nargs="+",
         default=[],
         type=_hexstring_to_int_list,
-        help="APDU command to send to the card within secure channel (hex format).",
+        help="APDU command[s] to send to the card (hex format)",
     )
 
-    common_parser.add_argument(
-        "--scp",
-        choices=["scp02", "scp03"],
-        default="scp02",
-        help="Secure channel protocol to use",
-    )
+    # parent parser with common arguments for commands (CCM related)
+    ccm_command_common_parser = argparse.ArgumentParser(add_help=False)
 
-    common_parser.add_argument(
+    ccm_command_common_parser.add_argument(
         "--sec-level",
         choices=[0, 1, 2, 3],
         type=int,
         default=1,
-        help="Security Level for secure channel session (default 1/C-MAC)",
+        help="Security Level for secure channel session (default: 1/C-MAC)",
     )
-
-    common_parser.add_argument(
+    ccm_command_common_parser.add_argument(
         "--sd-aid",
         default="",
         type=_hexstring_to_int_list,
         help="Security domain AID",
     )
-
-    common_parser.add_argument(
+    ccm_command_common_parser.add_argument(
         "--key-enc",
         default=const.KEY_40_4F_16B,
         type=_hexstring_to_byte_seq,
         help="SCP encryption key",
     )
-    common_parser.add_argument(
+    ccm_command_common_parser.add_argument(
         "--key-mac",
         default=const.KEY_40_4F_16B,
         type=_hexstring_to_byte_seq,
         help="SCP MAC key",
     )
-    common_parser.add_argument(
+    ccm_command_common_parser.add_argument(
         "--key-dek",
         default=const.KEY_40_4F_16B,
         type=_hexstring_to_byte_seq,
         help="SCP DEK key",
+    )
+    ccm_command_common_parser.add_argument(
+        "-k",
+        "--key",
+        default=const.KEY_40_4F_16B,
+        type=_hexstring_to_byte_seq,
+        help="SCP keys (when ENC, MAC, DEK keys are the same)",
+    )
+    ccm_command_common_parser.add_argument(
+        "-l",
+        "--list",
+        action="store_true",
+        help="List card's content after the CCM operation",
+    )
+
+    # parent parser for applet installation optional arguments (used in load and install commands)
+    common_install_parser = argparse.ArgumentParser(add_help=False)
+
+    common_install_parser.add_argument(
+        "-i",
+        "--instance-aid",
+        type=_hexstring_to_int_list,
+        help="Applet instance AID (in hex; default: applet's class AID)",
+    )
+    common_install_parser.add_argument(
+        "--priv",
+        default="00",
+        type=_hexstring_to_int_list,
+        help="Applet privileges (in hex; default: 00)",
+    )
+    common_install_parser.add_argument(
+        "--install-params",
+        type=_hexstring_to_int_list,
+        default="",
+        help="Installation parameters (in hex; default: nothing)",
     )
 
     # main parser
     parser = argparse.ArgumentParser(
         description="Card Content Management Tool for GlobalPlatform-compatible Java Cards.\
             Supports mutual authentication, CAP loading, applet installation, deletion,\
-                and sending APDU commands (including secure messaging)."
+                and sending APDU commands (including secure messaging)",
+        parents=[common_parser],
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Card content operation")
+    parser.set_defaults(command="transmit")
 
-    parser.add_argument(
-        "-a",
-        "--apdus",
-        nargs="+",
-        default=[],
-        type=_hexstring_to_int_list,
-        help="APDU command to send to the card without secure channel (hex format).",
+    subparsers = parser.add_subparsers(
+        dest="command", help=".:: Card content operation ::."
     )
 
-    parser.add_argument(
-        "-r",
-        "--reader",
-        help="Specify the smart card reader (e.g., 'ACS ACR38')",
-        default=None,
+    # Authentication command
+    delete_parser = subparsers.add_parser(
+        "auth",
+        help="Perform GP mutual authentication",
+        parents=[common_parser, ccm_command_common_parser],
+    )
+
+    # List command
+    delete_parser = subparsers.add_parser(
+        "list",
+        help="List loaded packages and installed applets",
+        parents=[common_parser, ccm_command_common_parser],
+    )
+    delete_parser.add_argument(
+        "--deprecated-struct",
+        action="store_true",
+        help="GET STATUS for card contents with deprecated data structure (P2.B2=0)",
     )
 
     # Load command
     load_parser = subparsers.add_parser(
-        "load", help="Load a CAP/JSON file to the Java card", parents=[common_parser]
+        "load",
+        help="Load a CAP/JSON file to the Java card and optionally install applet",
+        parents=[common_parser, ccm_command_common_parser, common_install_parser],
     )
     load_parser.add_argument("file", help="Path to the CAP/JSON file to be loaded")
     load_parser.add_argument(
@@ -221,123 +267,75 @@ def parse_arguments():
         "--asd-aid",
         type=_hexstring_to_int_list,
         default=[],
-        help="Associated Security Domain AID (in hex; default: CM/current-SD AID",
+        help="Associated Security Domain AID (in hex; default: CM/current-SD AID)",
     )
-
     load_parser.add_argument(
         "--load-params",
         type=_hexstring_to_int_list,
         default="",
         help="load parameters (in hex; optional)",
     )
-
     load_parser.add_argument(
-        "-o",
         "--components-order",
         type=str,
         nargs="+",
         default=[],
         help="list of component names specifying the order of initial or last components in load process",
     )
-
     load_parser.add_argument(
         "--order-position",
         choices=["head", "tail"],
         default="head",
         help="Indicates whether the components provided in --components-order specifies heading or trailing components",
     )
-
     load_parser.add_argument(
-        "-s",
         "--chunk-sizes",
         type=int,
         nargs="+",
         default=[],
         help="list of integers for the sizes of initial or last chunks of LOAD commands",
     )
-
     load_parser.add_argument(
         "--size-position",
         choices=["head", "tail"],
         default="head",
         help="Indicates whether the sizes provided in --chunk-sizes specifies heading or trailing LOAD commands sizes",
     )
-
-    load_parser.add_argument("--install", action='store_true', help="Instanciate the applet after loading.")
-
+    load_parser.add_argument(
+        "--install", action="store_true", help="Instanciate the applet after loading"
+    )
     load_parser.add_argument(
         "-c",
-        "--class-aid",
+        "--applet-class-aid",
         type=_hexstring_to_int_list,
-        help="AID of the applet class to instantiate after loading. "
-        "Mandatory if --install is present. ",
-    )
-
-    load_parser.add_argument(
-        "-i",
-        "--instance-aid",
-        type=_hexstring_to_int_list,
-        help="AID for the applet instance to be installed after load. "
-        "Must be used in combination with -c/--class-aid. "
-        "If omitted, AID provided in --class-aid is used instead. ",
-    )
-    load_parser.add_argument(
-        "--privileges",
-        default="00",
-        type=_hexstring_to_int_list,
-        help="Privileges (in hex; default: 00)",
-    )
-    load_parser.add_argument(
-        "--install-params",
-        type=_hexstring_to_int_list,
-        default="",
-        help="Installation parameters (in hex; default: nothing)",
+        help="AID of the applet class for installation (option when --install is used)",
     )
 
     # Install command
     install_parser = subparsers.add_parser(
         "install",
-        help="Instanciate an applet from an existing applet class on the card",
-        parents=[common_parser],
+        help="Instanciate an applet from an already loaded package; or optionally load CAP/JSON first and then instanciate an applet",
+        parents=[common_parser, ccm_command_common_parser, common_install_parser],
     )
     install_parser.add_argument(
         "-p",
         "--package-aid",
         type=_hexstring_to_int_list,
         required=True,
-        help="AID of the package containing applet class (in hex)",
+        help="AID of the package (in hex)",
     )
     install_parser.add_argument(
         "-c",
-        "--class-aid",
+        "--applet-class-aid",
         type=_hexstring_to_int_list,
-        required=True,
-        help="AID of the applet class to be instanciated (in hex)",
-    )
-    install_parser.add_argument(
-        "-i",
-        "--instance-aid",
-        type=_hexstring_to_int_list,
-        help="Applet instance AID (in hex; default: applet's class AID)",
-    )
-    install_parser.add_argument(
-        "--privileges",
-        default="00",
-        type=_hexstring_to_int_list,
-        help="Privileges (in hex; default: 00)",
-    )
-    install_parser.add_argument(
-        "--install-params",
-        type=_hexstring_to_int_list,
-        default="",
-        help="Installation parameters (in hex; default: nothing)",
+        help="Applet class AID (mandatory when installing an applet from a preloaded package; optional otherwise)",
     )
 
     # Delete command
     delete_parser = subparsers.add_parser(
         "delete",
         help="Delete an applet or package from the card",
-        parents=[common_parser],
+        parents=[common_parser, ccm_command_common_parser],
     )
     delete_parser.add_argument(
         "aid", type=_hexstring_to_int_list, help="AID of the applet/package to delete"
@@ -346,32 +344,12 @@ def parse_arguments():
     # Script command
     script_parser = subparsers.add_parser(
         "script",
-        help="Execute a sequence of commands from a script/json file.",
-        parents=[common_parser],
+        help="Execute a sequence of commands from a script/json file",
+        parents=[common_parser, ccm_command_common_parser],
     )
     script_parser.add_argument(
         "file",
-        help="Path to a script file (JSON) containing a list of commands to execute in order.",
-    )
-
-    # Authentication command
-    delete_parser = subparsers.add_parser(
-        "auth",
-        help="Performs Mutual Authentication with the card",
-        parents=[common_parser],
-    )
-
-    # List command
-    delete_parser = subparsers.add_parser(
-        "list",
-        help="List loaded packages and installed applets on the card",
-        parents=[common_parser],
-    )
-    delete_parser.add_argument(
-        "-d",
-        "--deprecated-struct",
-        action="store_true",
-        help="GET STATUS for card contents with deprecated data structure (P2.B2=0)",
+        help="Path to a script file (JSON) containing a list of commands to execute in order",
     )
 
     if len(sys.argv) == 1:
@@ -380,15 +358,32 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    if args.install:
-        if not args.class_aid:
-            parser.error("--install requires --class-aid to be specified.")
+    # As "parser" object is not available in main()
+    if args.command == "load" and args.install:
+        if not args.applet_class_aid:
+            parser.error(
+                "Error: --install requires -c/--applet-class-aid to be provided"
+            )
 
     return args
 
 
+def load_config(path):
+    if not path.exists():
+        return {}
+    with path.open() as fp:
+        return json.load(fp)
+
+
+def merge_settings_into_args(args, settings):
+    if not args.reader and settings["reader"]:
+        args.reader = settings["reader"]
+
+
 def main():
     args = parse_arguments()
+    settings = load_config(args.config)
+    merge_settings_into_args(args, settings)
 
     card_connection = CardReader()
     if not card_connection.connect(reader_name=args.reader):
@@ -424,24 +419,32 @@ def main():
                 args.file.lower().endswith(".json"),
             ):
                 if args.install:
-                    instance_aid = args.instance_aid if args.instance_aid else args.class_aid
+                    instance_aid = (
+                        args.instance_aid
+                        if args.instance_aid
+                        else args.applet_class_aid
+                    )
                     return installer.install_applet(
                         args.package_aid,
-                        args.class_aid,
+                        args.applet_class_aid,
                         instance_aid,
                         args.privileges,
                         args.install_params,
                     )
-                elif args.class_aid != args.instance_aid:  # only instance AID provided
+                elif (
+                    args.applet_class_aid != args.instance_aid
+                ):  # only instance AID provided
                     logger.error(
-                        f"Installation requires both --class-aid to be specified."
+                        f"Installation requires both --class-aid to be specified"
                     )
 
         case "install":
-            instance_aid = args.instance_aid if args.instance_aid else args.class_aid
+            instance_aid = (
+                args.instance_aid if args.instance_aid else args.applet_class_aid
+            )
             installer.install_applet(
                 args.package_aid,
-                args.class_aid,
+                args.applet_class_aid,
                 instance_aid,
                 args.privileges,
                 args.install_params,
@@ -456,6 +459,10 @@ def main():
         case "script":
             logger.error("Script command not implemented yet!")
 
+    # list the contnet if requested using "-l/--list"
+    if installer.secure_channel_session.is_mutually_authenticated and args.list:
+        installer.list_content()
+
     if args.apdus:
         for apdu in args.apdus:
             # ToDo: command's logical channel shall be compared with the secure channel's logical channel
@@ -464,7 +471,7 @@ def main():
                 and installer.secure_channel_session.sec_level
             ):
                 logger.info(
-                    "SELECT APDU received. Secure channel session security level reset to 'No Security'."
+                    "SELECT APDU received. Secure channel session security level reset to 'No Security'"
                 )
                 installer.secure_channel_session.reset_session()
 
