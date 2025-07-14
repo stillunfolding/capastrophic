@@ -11,7 +11,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_STORED
 
 from misc.template import MANIFEST_MF, JAVACARD_XML, APPLET_XML
 
-logger = logging.getLogger("Installer")
+logger = logging.getLogger("JSON2CAP")
 logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()

@@ -7,7 +7,7 @@ import sys
 import json
 import logging
 
-logger = logging.getLogger("Installer")
+logger = logging.getLogger("EXP2JSON")
 logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()

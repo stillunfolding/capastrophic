@@ -10,7 +10,7 @@ from zipfile import ZipFile
 from io import BytesIO, StringIO
 
 
-logger = logging.getLogger("Installer")
+logger = logging.getLogger("CAP2JSON")
 logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()

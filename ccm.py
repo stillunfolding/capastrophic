@@ -10,7 +10,7 @@ from utils.const import const
 from json2cap import clean_hex_string
 from pathlib import Path
 
-logger = logging.getLogger("Installer")
+logger = logging.getLogger("CCM")
 logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()
@@ -23,7 +23,7 @@ stream_handler.setFormatter(logger_formatter)
 logger.addHandler(stream_handler)
 
 
-class Installer:
+class CCM: # Card Content Manager
     def __init__(self, card_connection):
         self.card_connection = card_connection
         self.secure_channel_session = SCP(self.card_connection)
@@ -221,7 +221,14 @@ def parse_arguments():
         description="Card Content Management Tool for GlobalPlatform-compatible Java Cards.\
             Supports mutual authentication, CAP loading, applet installation, deletion,\
                 and sending APDU commands (including secure messaging)",
-        parents=[common_parser],
+        parents=[common_parser, ccm_command_common_parser],
+    )
+
+    parser.add_argument(
+        "-s",
+        "--secure-apdu",
+        action="store_true",
+        help="Send APDUs provided with -a/--apdu via SCP",
     )
 
     parser.set_defaults(command="transmit")
@@ -384,9 +391,9 @@ def main():
     if not card_connection.connect(reader_name):
         return False
 
-    installer = Installer(card_connection)
+    ccm = CCM(card_connection)
 
-    if args.command:
+    if args.command or args.secure_apdu:
 
         sec_level = (
             args.sec_level
@@ -394,7 +401,7 @@ def main():
             else settings.get("common", {}).get("sec_level", 1)
         )
 
-        if not installer.mutual_auth(
+        if not ccm.mutual_auth(
             sec_level=sec_level,
             static_enc=args.key_enc
             or args.key
@@ -421,7 +428,7 @@ def main():
             pass  # already done above
 
         case "load":
-            if installer.load_cap(
+            if ccm.load_cap(
                 args.file,
                 args.package_aid,
                 args.asd_aid,  # associate security domain
@@ -438,7 +445,7 @@ def main():
                         if args.instance_aid
                         else args.applet_class_aid
                     )
-                    return installer.install_applet(
+                    return ccm.install_applet(
                         args.package_aid,
                         args.applet_class_aid,
                         instance_aid,
@@ -456,7 +463,7 @@ def main():
             instance_aid = (
                 args.instance_aid if args.instance_aid else args.applet_class_aid
             )
-            installer.install_applet(
+            ccm.install_applet(
                 args.package_aid,
                 args.applet_class_aid,
                 instance_aid,
@@ -465,31 +472,31 @@ def main():
             )
 
         case "delete":
-            installer.delete_content(args.aid)
+            ccm.delete_content(args.aid)
 
         case "list":
-            installer.list_content(args.deprecated_struct)
+            ccm.list_content(args.deprecated_struct)
 
         case "script":
             logger.error("Script command not implemented yet!")
 
     # list the contnet if requested using "-l/--list"
-    if installer.secure_channel_session.is_mutually_authenticated and args.list:
-        installer.list_content()
+    if ccm.secure_channel_session.is_mutually_authenticated and args.list:
+        ccm.list_content()
 
     if args.apdu:
         for apdu in args.apdu:
             # ToDo: command's logical channel shall be compared with the secure channel's logical channel
             if (
                 apdu[:3] == [0x00, 0xA4, 0x04]  # Select APDU
-                and installer.secure_channel_session.sec_level
+                and ccm.secure_channel_session.sec_level
             ):
                 logger.info(
                     "SELECT APDU received. Secure channel session security level reset to 'No Security'"
                 )
-                installer.secure_channel_session.reset_session()
+                ccm.secure_channel_session.reset_session()
 
-            installer.secure_channel_session.send_secure_apdu(apdu)
+            ccm.secure_channel_session.send_secure_apdu(apdu)
 
     return True
 

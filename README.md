@@ -11,7 +11,7 @@ Capastrophic is a JCVM training [and testing] toolkit designed specifically for 
 - [To Do List](#to-do-list)
 
 ## Installation
-Except for the `installer.py` tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
+Except for the `ccm.py` (Card Content Manager) tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
 
 > [!IMPORTANT]
 > **Python 3.7 or newer is required.**
@@ -190,7 +190,7 @@ For example, changing an AID to a shorter or longer value requires updating rela
 >
 > Failing to do so (unless intentional) can result in corrupted CAP files or unexpected behavior during installation.
 >
-> Some off-card installers perform such consistency checks before installing a CAP file. However, the installer script provided in this project intentionally skips these checks and attempts to load the CAP file as is. This behavior is useful for training and testing purposes, where working with tampered CAP files is required.
+> Some off-card installers perform such consistency checks before installing a CAP file. However, the `ccm.py` (Card Content Manager) script provided in this project intentionally skips these checks and attempts to load the CAP file as is. This behavior is useful for training and testing purposes, where working with tampered CAP files is required.
 
 > [!TIP]
 > 🛠️ Working with `raw_modified` Field
@@ -205,11 +205,15 @@ For example, changing an AID to a shorter or longer value requires updating rela
 
 ### CAP Loading and Applet Installation
 
-The tool `installer.py` is a powerful off-card card content management tool. It provides a **highly flexible** CAP file loading and applet installation support and also secure and non-secure APDU command communication (i.e., secure channel establishment and communication). Additionally, it provides functionality for listing and deleting card contents, making it a comprehensive solution for managing the card content.
+The tool `ccm.py` is a powerful off-card card content management tool. It provides a **highly flexible(*)** CAP file loading and applet installation support and also secure and non-secure APDU command communication (i.e., secure channel establishment and communication). Additionally, it provides functionality for listing and deleting card contents, making it a comprehensive solution for managing the card content.
+
+**(*)** You can customize the order in which CAP file components (`Header.cap`, `Directory.cap`, etc.) are loaded onto the card. Additionally, you may define a _size sequence_ to control the sizes of the initial or final _#n_ chunks in the LOAD APDU commands. Load and install parameters can also be specified as needed.
 
 ```
-user@pc:~/capastrophic$ ./installer.py 
-usage: installer.py [-h] [-x] [-r READER] [-a APDU [APDU ...]] {auth,list,load,install,delete,script} ...
+user@pc:~/capastrophic$ ./ccm.py 
+usage: ccm.py [-h] [-x] [-r READER] [-a APDU [APDU ...]] [--sec-level {0,1,2,3}] [--sd-aid SD_AID] [--key-enc KEY_ENC] [--key-mac KEY_MAC] [--key-dek KEY_DEK] [-k KEY]
+                    [-l] [-s]
+                    {auth,list,load,install,delete,script} ...
 
 Card Content Management Tool for GlobalPlatform-compatible Java Cards. Supports mutual authentication, CAP loading, applet installation, deletion, and sending APDU commands
 (including secure messaging)
@@ -231,14 +235,23 @@ options:
                         Specify the smart card reader (e.g., 'ACS ACR38')
   -a APDU [APDU ...], --apdu APDU [APDU ...]
                         APDU command[s] to send to the card (hex format)
+  --sec-level {0,1,2,3}
+                        Security Level for secure channel session (default: 1/C-MAC)
+  --sd-aid SD_AID       Security domain AID
+  --key-enc KEY_ENC     SCP encryption key (default: 40...4F)
+  --key-mac KEY_MAC     SCP MAC key (default: 40...4F)
+  --key-dek KEY_DEK     SCP DEK key (default: 40...4F)
+  -k KEY, --key KEY     SCP keys (to be used when ENC, MAC, DEK keys are all equal)
+  -l, --list            List card's content after the CCM operation
+  -s, --secure-apdu     Send APDUs provided with -a/--apdu via SCP
 ```
 
-The `installer.py` can be used in two ways:
+The `ccm.py` can be used in two ways:
 
 - **Command Mode**: Specify an operation using one of the supported command keywords (currently: `auth`, `list`, `load`, `install`, `delete`, `script`). Only one of these commands can be executed at a time.
 - **Raw APDU Mode**: Omit the command keyword and use the `-a`/ `--apdu` option to send raw APDU commands directly.
 
-To send APDUs securely (i.e., over an established secure channel), use the `-a`/`--apdu` option together with the `auth` command keyword (or any other command, as they all establish a secure channel as part of their operation).
+To send APDUs securely (i.e., over an established secure channel), the APDU command list (`-a`/`--apdu`) must be used either in combination with the `-s`/`--secure-apdu` **flag** or together with the `auth` **command keyword** (or any other command that establishes a secure channel as part of its operation). In case of the former (`-s`/`--secure-apdu`), the data elements required for Mutual Authentication and secuure channel establishment shall also be provided either via command line argument or via `settings.json`; otherwise, default values will be used.
 
 > [!CAUTION]
 > Sending a SELECT APDU (`00A404...`) will reset any previously established secure channel.
@@ -263,9 +276,10 @@ This means:
 
 If an argument is provided via the command line, it overrides the value in `settings.json`. If not specified on the command line but available in `settings.json`, that value will be used. If neither is provided, the script will fall back to the built-in default.
 
-_Examples:_
-
-Given the extensive number of arguments and options the `Installer.py` tool supports, examples have been moved to [Installer Examples](./docs/INSTALLER_EXAMPLES.md) to keep this README consice.
+> [!TIP]
+> _Examples:_
+>
+> Given the extensive number of arguments and options the `ccm.py` tool supports, examples have been moved to [CCM Examples](./wiki/CCM_EXAMPLES.md) to keep this README consice.
 
 
 ## Supported CAP & EXP File Formats
@@ -306,20 +320,21 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
     +------------------+-------------+-------------+
 
 > [!TIP]
-> For detailed information on Java Card defined file structures, see [CAP/EXP Knowledge Base](./docs/JC_FILES_KNOWLEDGE_BASE.md).
+> For detailed information on Java Card defined file structures, see [CAP/EXP Knowledge Base](./wiki/JC_FILES_KNOWLEDGE_BASE.md).
 
 
 ## Supported SCP Protocols
 - SCP02 (i='15', i='55'; C-MAC on modified APDU)
 
 ## To Do List
-- Add "script" command to `installer.py` to execute a sequence of commands
+- Add "script" command to `ccm.py` to execute a sequence of commands
 - Implement support for **Deep mode** CAP file conversion to `json2cap.py`
 - Add SCP03 support to the `scp.py` tool
-- Implement JSON file load on card to `installer.py`
+- Implement JSON file load on card to `ccm.py`
 - Add logical-channel awareness to `scp.py`
-- Implement support for package/class AIDs extraction from CAP/JSON for load/install commands for `installer.py`
-- Add optional CAP/JSON load support to install command for `installer.py`
+- Implement support for package/class AIDs extraction from CAP/JSON for load/install commands for `ccm.py`
+- Add optional CAP/JSON load support to install command for `ccm.py`
 - Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs
 - Add more logs, and load log-level from settings.
-- Add interactive mode for APDU command communication to `installer.py`
+- Add interactive mode for APDU command communication to `ccm.py`
+- Add component exclusion support for `ccm.py load`. 
