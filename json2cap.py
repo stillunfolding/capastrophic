@@ -128,6 +128,11 @@ def parse_arguments():
         default="shallow",
         help="Optional conversion mode: shallow mode (default) uses 'raw_modified' or 'raw' elements in JSON file, whereas deep mode uses parsed elements.",
     )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+        
     return parser.parse_args()
 
 

@@ -356,6 +356,10 @@ def parse_arguments():
         "--print", "-p", action="store_true", help="Print the JSON in the output"
     )
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
     return parser.parse_args()
 
 
