@@ -3,11 +3,13 @@
 import argparse
 import json
 import logging
+import os
 import sys
+from datetime import datetime
 from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
-from json2cap import clean_hex_string
+from json2cap import JSON2CAP
 from pathlib import Path
 
 logger = logging.getLogger("CCM")
@@ -46,9 +48,42 @@ class CCM:  # Card Content Manager
             sec_level, static_enc, static_mac, static_dek, sd_aid
         )
 
+    def _get_cap_file_path(self, json_file_path, json_conversion_mode):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        json_file_name = os.path.splitext(os.path.basename(json_file_path))[0]
+        cap_file_path = (
+            f"output{os.path.sep}CCM_generated_{timestamp}_{json_file_name}_json.cap"
+        )
+
+        try:
+            with open(json_file_path, "r", encoding="utf-8") as input_file:
+                json_data = json.load(input_file)
+
+            json2cap = JSON2CAP()
+            success = json2cap.build_cap(
+                json_data, cap_file_path, json_conversion_mode
+            )  # only default conversion mode: SHALLOW
+
+            if success:
+                logger.info(
+                    f"Auto-Generated CAP file is available under '{cap_file_path}'"
+                )
+                return cap_file_path
+            else:
+                logger.error("Automatic CAP file generation failed!")
+                sys.exit(1)
+
+        except (OSError, json.JSONDecodeError) as e:
+            logger.exception(f"Failed to process JSON file '{json_file_path}': {e}")
+            sys.exit(1)
+
+        except Exception as e:
+            logger.exception(f"Unexpected error during automatic CAP generation: {e}")
+            sys.exit(1)
+
     def load_cap(
         self,
-        cap_file_path,
+        file_path,
         cap_aid,  # package AID in compact format
         sd_aid=[],
         load_params=[],
@@ -57,21 +92,24 @@ class CCM:  # Card Content Manager
         chunk_sizes=[],
         apply_sizes_to_head=True,
         from_json=False,
+        json_conversion_mode="shallow",
     ):
+
         if from_json:
-            logger.error("Load from JSON not implemented yet!")
-            return False
+            cap_file_path = self._get_cap_file_path(file_path, json_conversion_mode)
         else:
-            return self.secure_channel_session.load_cap(
-                cap_file_path,
-                cap_aid,
-                sd_aid,
-                load_params,
-                components_order,
-                apply_order_to_head,
-                chunk_sizes,
-                apply_sizes_to_head,
-            )
+            cap_file_path = file_path
+
+        return self.secure_channel_session.load_cap(
+            cap_file_path,
+            cap_aid,
+            sd_aid,
+            load_params,
+            components_order,
+            apply_order_to_head,
+            chunk_sizes,
+            apply_sizes_to_head,
+        )
 
     def install_applet(
         self,
@@ -317,6 +355,14 @@ def parse_arguments():
         type=_hexstring_to_int_list,
         help="AID of the applet class for installation (option when --install is used)",
     )
+    load_parser.add_argument(
+        "-m",
+        "--json-conversion-mode",
+        choices=["shallow", "deep"],
+        default="shallow",
+        help="Optional JSON to CAP conversion mode: shallow mode (default) uses 'raw_modified' or 'raw' elements in JSON file, whereas deep mode uses parsed elements.\
+            Can be used when input file is provided in JSON format.",
+    )
 
     # Install command
     install_parser = subparsers.add_parser(
@@ -439,6 +485,7 @@ def main():
                 args.chunk_sizes,
                 args.size_position == "head",
                 args.file.lower().endswith(".json"),
+                args.json_conversion_mode,
             ):
                 if args.install:
                     instance_aid = (
