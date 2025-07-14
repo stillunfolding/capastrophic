@@ -51,7 +51,7 @@ options:
   --overwrite           Overwrite existing file if the provided output file name is not unique.
   --print, -p           Print the JSON in the output
 ```
-_Example_
+_Example:_
 ```
 user@pc:~/capastrophic$ ./cap2json.py sample_files/helloworldPackage_2.3.cap
 Parsed CAP file written to 'output/20250709_111232_helloworldPackage_2.3_cap.json'
@@ -128,9 +128,7 @@ Two conversion modes are supported:
 
 - **Shallow** mode (default): For each CAP component in the JSON, the script checks for the `raw_modified` field. If present **and non-empty**, its value is used to regenerate the CAP file. Otherwise, the original `raw` field is used. In this mode, the content of parsed elements (such as `size-u2`) is ignored.
 
-- **Deep** mode: In this mode, the CAP file would be regenerated/reconstructed from the parsed fields (such as `size-u2`), rather than using raw byte values (`raw` or `raw_modified`).
-
-> ⚠️ Note: Deep conversion mode is currently not implemented.
+- **Deep** mode: In this mode (currently not implemented), the CAP file would be regenerated/reconstructed from the parsed fields (such as `size-u2`), rather than using raw byte values (`raw` or `raw_modified`).
 
 ```
 user@pc:~/capastrophic$ ./json2cap.py 
@@ -149,7 +147,7 @@ options:
   -m {shallow,deep}, --mode {shallow,deep}
                         Optional conversion mode: shallow mode (default) uses 'raw_modified' or 'raw' elements in JSON file, whereas deep mode uses parsed elements.
 ```
-_Example_
+_Example:_
 
 ```
 user@pc:~/capastrophic$ ./json2cap.py output/helloworld.json 
@@ -207,10 +205,68 @@ For example, changing an AID to a shorter or longer value requires updating rela
 
 ### CAP Loading and Applet Installation
 
-TBA
+The tool `installer.py` is a powerful off-card card content management tool. It provides a **highly flexible** CAP file loading and applet installation support and also secure and non-secure APDU command communication (i.e., secure channel establishment and communication). Additionally, it provides functionality for listing and deleting card contents, making it a comprehensive solution for managing the card content.
 
-> [!TIP]
-> See examples in [Installer Examples](./docs/EXAMPLES.md).
+```
+user@pc:~/capastrophic$ ./installer.py 
+usage: installer.py [-h] [-x] [-r READER] [-a APDU [APDU ...]] {auth,list,load,install,delete,script} ...
+
+Card Content Management Tool for GlobalPlatform-compatible Java Cards. Supports mutual authentication, CAP loading, applet installation, deletion, and sending APDU commands
+(including secure messaging)
+
+positional arguments:
+  {auth,list,load,install,delete,script}
+                        .:: Card content operation ::.
+    auth                Perform GP mutual authentication
+    list                List loaded packages and installed applets
+    load                Load a CAP/JSON file to the Java card and optionally install applet
+    install             Instanciate an applet from an already loaded package; or optionally load CAP/JSON first and then instanciate an applet
+    delete              Delete an applet or package from the card
+    script              Execute a sequence of commands from a script/json file
+
+options:
+  -h, --help            show this help message and exit
+  -x, --skip-settings   Ignore settings.json
+  -r READER, --reader READER
+                        Specify the smart card reader (e.g., 'ACS ACR38')
+  -a APDU [APDU ...], --apdu APDU [APDU ...]
+                        APDU command[s] to send to the card (hex format)
+```
+
+The `installer.py` can be used in two ways:
+
+- **Command Mode**: Specify an operation using one of the supported command keywords (currently: `auth`, `list`, `load`, `install`, `delete`, `script`). Only one of these commands can be executed at a time.
+- **Raw APDU Mode**: Omit the command keyword and use the `-a`/ `--apdu` option to send raw APDU commands directly.
+
+To send APDUs securely (i.e., over an established secure channel), use the `-a`/`--apdu` option together with the `auth` command keyword (or any other command, as they all establish a secure channel as part of their operation).
+
+> [!CAUTION]
+> Sending a SELECT APDU (`00A404...`) will reset any previously established secure channel.
+
+**Common Arguments and Configuration**
+
+Several arguments, such as GP keys and security level, are common across commands. To avoid repeating them for each command invocation, you can utilize `settings.json` file. Nevertheless, if not provided in either the command line or `settings.json`, default values will be used.
+
+**Reader Selection (`-r` / `--reader`)**
+
+If the `-r`/`--reader` argument is omitted both from the command line and from `settings.json`, a list of the available readers will be displayed and you need to select one before proceeding.
+
+**Argument Source Precedence**
+
+The precedence order for argument values is as follows:
+
+1. Command-line arguments (highest precedence)
+2. `settings.json` values
+3. Default values (used if not specified elsewhere)
+
+This means:
+
+If an argument is provided via the command line, it overrides the value in `settings.json`. If not specified on the command line but available in `settings.json`, that value will be used. If neither is provided, the script will fall back to the built-in default.
+
+_Examples:_
+
+Given the extensive number of arguments and options the `Installer.py` tool supports, examples have been moved to [Installer Examples](./docs/INSTALLER_EXAMPLES.md) to keep this README consice.
+
 
 ## Supported CAP & EXP File Formats
 Capastrophic supports all CAP and export file format versions introduced by Oracle as of today (July 2025):
@@ -265,3 +321,5 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - Implement support for package/class AIDs extraction from CAP/JSON for load/install commands for `installer.py`
 - Add optional CAP/JSON load support to install command for `installer.py`
 - Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs
+- Add more logs, and load log-level from settings.
+- Add interactive mode for APDU command communication to `installer.py`

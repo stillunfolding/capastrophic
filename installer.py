@@ -139,7 +139,7 @@ def parse_arguments():
     )
     common_parser.add_argument(
         "-a",
-        "--apdus",
+        "--apdu",
         nargs="+",
         default=[],
         type=_hexstring_to_int_list,
@@ -477,8 +477,8 @@ def main():
     if installer.secure_channel_session.is_mutually_authenticated and args.list:
         installer.list_content()
 
-    if args.apdus:
-        for apdu in args.apdus:
+    if args.apdu:
+        for apdu in args.apdu:
             # ToDo: command's logical channel shall be compared with the secure channel's logical channel
             if (
                 apdu[:3] == [0x00, 0xA4, 0x04]  # Select APDU
