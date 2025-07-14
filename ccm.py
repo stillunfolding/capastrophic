@@ -334,6 +334,7 @@ def parse_arguments():
     install_parser.add_argument(
         "-c",
         "--applet-class-aid",
+        required=True,
         type=_hexstring_to_int_list,
         help="Applet class AID (mandatory when installing an applet from a preloaded package; optional otherwise)",
     )
@@ -467,7 +468,7 @@ def main():
                 args.package_aid,
                 args.applet_class_aid,
                 instance_aid,
-                args.privileges,
+                args.priv,
                 args.install_params,
             )
 
