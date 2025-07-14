@@ -23,7 +23,7 @@ stream_handler.setFormatter(logger_formatter)
 logger.addHandler(stream_handler)
 
 
-class CCM: # Card Content Manager
+class CCM:  # Card Content Manager
     def __init__(self, card_connection):
         self.card_connection = card_connection
         self.secure_channel_session = SCP(self.card_connection)
@@ -370,7 +370,7 @@ def parse_arguments():
     if args.command == "load" and args.install:
         if not args.applet_class_aid:
             parser.error(
-                "Error: --install requires -c/--applet-class-aid to be provided"
+                "The --install flag requires -c/--applet-class-aid argument to be provided"
             )
 
     return args
