@@ -367,7 +367,7 @@ def parse_arguments():
     # Install command
     install_parser = subparsers.add_parser(
         "install",
-        help="Instanciate an applet from an already loaded package; or optionally load CAP/JSON first and then instanciate an applet",
+        help="Instanciate an applet from an already loaded package.",
         parents=[common_parser, ccm_command_common_parser, common_install_parser],
     )
     install_parser.add_argument(
