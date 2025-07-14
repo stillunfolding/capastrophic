@@ -1,10 +1,10 @@
 {
-    "common":{
-        "reader":"ACS ACR1281 1S Dual Reader 00 00",
-        "sec_level":1,
-        "sd_aid":[],
-        "key_enc":"404142434445464748494a4b4c4d4e4f",
-        "key_mac":"404142434445464748494a4b4c4d4e4f",
-        "key_dek":"404142434445464748494a4b4c4d4e4f"
+    "common": {
+        "reader": "ACS ACR1281 1S Dual Reader 00 00",
+        "sec_level": 1,
+        "sd_aid": [],
+        "key_enc": "404142434445464748494a4b4c4d4e4f",
+        "key_mac": "404142434445464748494a4b4c4d4e4f",
+        "key_dek": "404142434445464748494a4b4c4d4e4f",
     }
 }
