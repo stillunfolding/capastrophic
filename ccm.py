@@ -9,7 +9,7 @@ from datetime import datetime
 from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
-from json2cap import JSON2CAP
+from json2cap import JSON2CAP, clean_hex_string
 from cap2json import CAP2JSON
 from pathlib import Path
 
@@ -183,6 +183,12 @@ def parse_arguments():
         default=[],
         type=_hexstring_to_int_list,
         help="APDU command[s] to send to the card (hex format)",
+    )
+    common_parser.add_argument(
+        "-I",
+        "--interactive",
+        action="store_true",
+        help="Interactive mode for APDU communication",
     )
 
     # parent parser with common arguments for commands (CCM related)
@@ -590,24 +596,54 @@ def main():
         case "script":
             logger.error("Script command not implemented yet!")
 
-    # list the contnet if requested using "-l/--list"
-    if ccm.secure_channel_session.is_mutually_authenticated and args.list:
+    # handle "-l/--list"
+    if args.list:
         ccm.list_content()
 
+    # handle "-a/--apdu"
     if args.apdu:
         for apdu in args.apdu:
-            # ToDo: command's logical channel shall be compared with the secure channel's logical channel
-            if (
-                apdu[:3] == [0x00, 0xA4, 0x04]  # Select APDU
-                and ccm.secure_channel_session.sec_level
-            ):
-                logger.info(
-                    "SELECT APDU received. Secure channel session security level reset to 'No Security'"
+            ccm.send_secure_apdu(apdu)
+
+    # handle "-I/--interactive"
+    if args.interactive:
+        print()
+        print("::: Interactive mode: Enter APDUs in hex strings and press Enter.")
+        print("::: Input is case-insensitive. Any non-hex characters will be ignored.")
+        print("::: To exit, type 'q' or 'quit'.\n")
+
+        while True:
+            try:
+                user_input = input(">> ").lower().replace("0x", "").strip()
+
+                if not len(user_input):
+                    continue
+
+                if user_input.lower() in {"q", "quit"}:
+                    print("Exiting interactive mode.")
+                    break
+
+                hex_string = clean_hex_string(user_input)
+                ccm.send_secure_apdu(list(bytes.fromhex(hex_string)))
+
+            except ValueError:
+                logger.error(
+                    "Invalid APDU: "
+                    + " ".join(
+                        f'{hex_string[i:i+2] if len(hex_string[i:i+2]) == 2 else hex_string[i:i+1] + "?"}'
+                        for i in range(0, len(hex_string), 2)
+                    )
                 )
-                ccm.secure_channel_session.reset_session()
 
-            ccm.secure_channel_session.send_secure_apdu(apdu)
+            except Exception:
+                logger.error("APDU transmission failed! Unknown error!")
+                logger.info("Automatic card connection reset.")
+                card_connection.disconnect()
+                if not card_connection.connect(reader_name):
+                    return False
+                ccm.card_connection = card_connection
 
+            print()
     return True
 
 

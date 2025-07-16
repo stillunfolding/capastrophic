@@ -37,6 +37,14 @@ class SCP:
         self.last_mac = None
 
     def send_secure_apdu(self, command):
+        # ToDo: command's logical channel shall be compared with the secure channel's logical channel
+        if (
+            command[:3] == [0x00, 0xA4, 0x04]  # Select APDU
+        ):
+            logger.info(
+                "SELECT APDU received. Secure channel session security level reset to 'No Security'"
+            )
+            self.reset_session()
 
         cla, ins, p1, p2, lc = command[:5]
 

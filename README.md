@@ -235,6 +235,7 @@ options:
                         Specify the smart card reader (e.g., 'ACS ACR38')
   -a APDU [APDU ...], --apdu APDU [APDU ...]
                         APDU command[s] to send to the card (hex format)
+  -I, --interactive     Interactive mode for APDU communication
   --sec-level {0,1,2,3}
                         Security Level for secure channel session (default: 1/C-MAC)
   --sd-aid SD_AID       Security domain AID
@@ -251,7 +252,46 @@ The `ccm.py` can be used in two ways:
 - **Command Mode**: Specify an operation using one of the supported command keywords (currently: `auth`, `list`, `load`, `install`, `delete`, `script`). Only one of these commands can be executed at a time.
 - **Raw APDU Mode**: Omit the command keyword and use the `-a`/ `--apdu` option to send raw APDU commands directly.
 
-To send APDUs securely (i.e., over an established secure channel), the APDU command list (`-a`/`--apdu`) must be used either in combination with the `-s`/`--secure-apdu` **flag** or together with the `auth` **command keyword** (or any other command that establishes a secure channel as part of its operation). In case of the former (`-s`/`--secure-apdu`), the data elements required for Mutual Authentication and secuure channel establishment shall also be provided either via command line argument or via `settings.json`; otherwise, default values will be used.
+Note: both modes can be followed by an interactive APDU communication session by using the `-I`/`--interactive` flag:
+```
+user@pc:~/capastrophic$ ./ccm.py --secure-apdu -I
+2025-07-16 12:54:16     INFO    Connected to card. ATR: 3B9F96801F878031E073FE211B674A4C753034054BA9
+2025-07-16 12:54:16     INFO    APDU Cmd ---> 00 A4 04 00 00
+2025-07-16 12:54:16     INFO    APDU Res <--- 61 12
+2025-07-16 12:54:16     INFO    APDU Cmd (auto) ---> 00 C0 00 00 12
+2025-07-16 12:54:16     INFO    APDU Res (auto) <--- 6F 10 84 08 A0 00 00 00 03 00 00 00 A5 04 9F 65 01 FF 90 00
+2025-07-16 12:54:16     INFO    APDU Cmd ---> 00 A4 04 00 08 A0 00 00 00 03 00 00 00
+2025-07-16 12:54:16     INFO    APDU Res <--- 61 12
+2025-07-16 12:54:16     INFO    APDU Cmd (auto) ---> 00 C0 00 00 12
+2025-07-16 12:54:16     INFO    APDU Res (auto) <--- 6F 10 84 08 A0 00 00 00 03 00 00 00 A5 04 9F 65 01 FF 90 00
+2025-07-16 12:54:16     INFO    APDU Cmd ---> 80 50 00 00 08 83 C0 9B FE CC 4E B5 61
+2025-07-16 12:54:16     INFO    APDU Res <--- 61 1C
+2025-07-16 12:54:16     INFO    APDU Cmd (auto) ---> 00 C0 00 00 1C
+2025-07-16 12:54:16     INFO    APDU Res (auto) <--- 00 00 00 00 00 00 00 00 00 00 70 02 00 3F F0 34 9B 71 31 A1 BE FF C0 45 79 3B 79 6E 90 00
+2025-07-16 12:54:16     INFO    APDU Cmd ---> 84 82 01 00 10 F0 96 10 3D 79 56 92 D3 D9 96 05 A6 EE C3 F8 4B
+2025-07-16 12:54:16     INFO    APDU Res <--- 90 00
+
+::: Interactive mode: Enter APDUs in hex strings and press Enter.
+::: Input is case-insensitive. Any non-hex characters will be ignored.
+::: To exit, type 'q' or 'quit'.
+
+>> 80F2400000
+2025-07-16 12:55:00     INFO    APDU Cmd ---> 84 F2 40 00 08 7C D4 E2 D3 A6 31 A6 E5
+2025-07-16 12:55:00     INFO    APDU Res <--- 6A 80
+
+>> 80F24000024F00
+2025-07-16 12:55:28     INFO    APDU Cmd ---> 84 F2 40 00 0A 4F 00 D4 FF 13 FC 87 A7 E6 44
+2025-07-16 12:55:28     INFO    APDU Res <--- 61 72
+2025-07-16 12:55:28     INFO    APDU Cmd (auto) ---> 00 C0 00 00 72
+2025-07-16 12:55:28     INFO    APDU Res (auto) <--- 10 A0 00 00 00 87 10 02 FF FF FF FF 89 07 09 00 00 07 00 10 A0 00 00 00 87 10 04 FF FF FF FF 89 07 09 00 00 07 00 10 A0 00 00 00 87 AB CD FF FF FF FF 89 07 09 00 00 07 00 0A 53 69 6D 62 61 4E 2E 52 41 4D 07 00 10 A0 00 00 00 09 00 01 FF FF FF FF 89 00 00 00 00 07 04 0A 53 69 6D 62 61 4E 2E 52 46 4D 07 00 09 A0 00 00 01 51 41 43 4C 00 07 00 90 00
+
+>> q
+Exiting interactive mode.
+```
+> [!TIP]
+> You don't need to manually remove non-hexadecimal characters from APDUs copied from other sources; Spaces, colons, and similar characters are automatically stripped out.
+
+To send APDUs securely (i.e., over an established secure channel), the APDU command list (`-a`/`--apdu`) or the interactive mode (`-I`/`--interactive`) must be used either in combination with the `-s`/`--secure-apdu` **flag** (as above) or together with the `auth` **command keyword** (or any other command that establishes a secure channel as part of its operation). In case of the former (`-s`/`--secure-apdu`), the data elements required for Mutual Authentication and secuure channel establishment shall also be provided either via command line argument or via `settings.json`; otherwise, default values will be used.
 
 > [!CAUTION]
 > Sending a SELECT APDU (`00A404...`) will reset any previously established secure channel.
@@ -333,5 +373,4 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - Add logical-channel awareness to `scp.py`
 - Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs
 - Add more logs, and load log-level from settings.
-- Add interactive mode for APDU command communication to `ccm.py`
 - Add component exclusion support for `ccm.py load`. 
