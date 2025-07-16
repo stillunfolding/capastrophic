@@ -227,6 +227,7 @@ positional arguments:
     install             Instanciate an applet from an already loaded package; or optionally load CAP/JSON first and then instanciate an applet
     delete              Delete an applet or package from the card
     script              Execute a sequence of commands from a script/json file
+    capinfo             Print general information of a package, including the AID, applets, and imports.
 
 options:
   -h, --help            show this help message and exit
@@ -387,6 +388,5 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - Implement support for **Deep mode** CAP file conversion to `json2cap.py`
 - Add SCP03 support to the `scp.py` tool
 - Add logical-channel awareness to `scp.py`
-- Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs
 - Add more logs, and load log-level from settings.
 - Add component exclusion support for `ccm.py load`. 

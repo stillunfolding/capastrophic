@@ -1,0 +1,13 @@
+{
+    "A0000000620101":{
+        "name": "javacard.framework",
+        "1.0": "Java Card 2.1.1",
+        "1.2": "Java Card 2.2.1",
+        "1.4": "Java Card 3.0.1",
+        "1.5": "Java Card 3.0.4"
+    },
+    "A0000000620001":{
+        "name": "java.lang",
+        "1.0": "Java Card 2.1.1"
+    }
+}

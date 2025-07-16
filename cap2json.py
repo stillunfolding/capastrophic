@@ -1835,6 +1835,25 @@ class CAP2JSON:
         return self.cap
 
 
+def resolve_package_name(aid, version, db_path="aid_db.json"):
+    try:
+        with open(db_path, "r") as fp:
+            aid_database = json.load(fp)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to load AID database")
+        return "Unknown / -"
+
+    # Try both uppercase and lowercase keys
+    package_info = aid_database.get(aid.upper(), {}) or aid_database.get(
+        aid.lower(), {}
+    )
+
+    package_name = package_info.get("name", "Unknown")
+    additional_info = package_info.get(version, "-")
+
+    return f"{package_name} / {additional_info}"
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Read a CAP file and generate corresponding parsed JSON representation."

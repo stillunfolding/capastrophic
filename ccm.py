@@ -10,7 +10,7 @@ from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
 from json2cap import JSON2CAP, clean_hex_string
-from cap2json import CAP2JSON
+from cap2json import CAP2JSON, resolve_package_name
 from pathlib import Path
 
 logger = logging.getLogger("CCM")
@@ -85,7 +85,7 @@ class CCM:  # Card Content Manager
     def load_cap(
         self,
         file_path,
-        cap_aid,  # package AID in compact format
+        cap_aid,  # = package AID in compact format
         sd_aid=[],
         load_params=[],
         components_order=[],
@@ -415,6 +415,16 @@ def parse_arguments():
         help="Path to a script file (JSON) containing a list of commands to execute in order",
     )
 
+    # CapInfo command
+    capinfo_parser = subparsers.add_parser(
+        "capinfo",
+        help="Print general information of a package, including the AID, applets, and imports.",
+    )
+    capinfo_parser.add_argument(
+        "file",
+        help="Path to the CAP/JSON file",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -431,7 +441,7 @@ def parse_arguments():
     return args
 
 
-def get_CAP_AIDs(file_path):
+def get_CAP_summary_info(file_path):
     try:
         if file_path.lower().endswith(".json"):
             with open(file_path, "r") as fp:
@@ -440,12 +450,38 @@ def get_CAP_AIDs(file_path):
             cap2json = CAP2JSON()
             json_cap = cap2json.parse(file_path)
 
-        package_aid = list(bytes.fromhex(json_cap["Header.cap"]["package"]["AID"]))
+        package_aid = list(
+            bytes.fromhex(
+                json_cap["Header.cap"]
+                .get("package", {})
+                .get("AID", "")  # Compact Format
+                or json_cap["Header.cap"].get("CAP_AID", "")  # Extended Format
+            )
+        )
+
+        package_version = json_cap["Header.cap"].get("package", {}).get(
+            "version-u2"
+        ) or json_cap["Header.cap"].get("CAP_version-u2", "")
+
         applets_aid = [
             list(bytes.fromhex(applet["AID"]))
             for applet in json_cap.get("Applet.cap", {}).get("applets", [])
         ]
-        return {"package_aid": package_aid, "applets_aid": applets_aid}
+
+        imported_packages = [
+            {
+                "aid": list(bytes.fromhex(package["AID"])),
+                "version": package["version-u2"],
+            }
+            for package in json_cap.get("Import.cap", {}).get("packages", [])
+        ]
+
+        return {
+            "package_aid": package_aid,
+            "package_version": package_version,
+            "applets_aid": applets_aid,
+            "imports": imported_packages,
+        }
 
     except Exception as e:
         logger.error(f"Failed to parse CAP file and extract AIDs.")
@@ -460,11 +496,45 @@ def load_settings():
         return json.load(fp)
 
 
+def print_cap_summary_info(file):
+    cap_info = get_CAP_summary_info(file)
+    print()
+
+    package_aid = cap_info.get("package_aid")
+    if package_aid:
+        print("Package:")
+        version = cap_info.get("package_version", "N/A")
+        print(f"\t- {bytes(package_aid).hex().upper()} (v{version})\n")
+        print()
+
+    applets_aid = cap_info.get("applets_aid")
+    if applets_aid:
+        print("Applets:")
+        for aid in applets_aid:
+            print(f"\t- {bytes(aid).hex().upper()}")
+        print()
+
+    imports = cap_info.get("imports")
+    if imports:
+        print("Imports:")
+        for imp in imports:
+            aid_hex = bytes(imp["aid"]).hex().upper()
+            version = imp.get("version", "N/A")
+            package_name = resolve_package_name(aid_hex, version)
+            print(f"\t- {aid_hex} (v{version}) ({package_name})")
+        print()
+
+
 def main():
     args = parse_arguments()
     settings = {} if args.skip_settings else load_settings()
-    print(settings)
-    print(args.command)
+
+    # No card reader is required to execute this specific command.
+    # hence, let's process it before reader-related operations.
+    if args.command == "capinfo":
+        print_cap_summary_info(args.file)
+        return
+
     card_connection = CardReader()
     reader_name = args.reader or settings.get("common", {}).get("reader", "")
     if not card_connection.connect(reader_name):
@@ -507,12 +577,12 @@ def main():
             pass  # already done above
 
         case "load":
-            cap_aids = get_CAP_AIDs(args.file)
+            cap_info = get_CAP_summary_info(args.file)
 
-            package_aid = args.package_aid or cap_aids.get("package_aid", {})
+            package_aid = args.package_aid or cap_info.get("package_aid", {})
             if not package_aid:
                 logger.error(
-                    "Package AID required for INSTALL [for load] APDU; cannot extract from file—specify via command-line."
+                    "Package AID required for INSTALL [for load] APDU; cannot extract from file; specify via command-line."
                 )
                 sys.exit(1)
 
@@ -532,7 +602,7 @@ def main():
             if loaded_succesfully and args.install:
 
                 applet_class_aid = args.applet_class_aid
-                cap_applet_classes_aid = cap_aids.get("applets_aid", [])
+                cap_applet_classes_aid = cap_info.get("applets_aid", [])
 
                 skip_install = False
 
