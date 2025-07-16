@@ -26,11 +26,10 @@ logger.addHandler(stream_handler)
 
 # remove the comments, spaces, etc.
 def clean_hex_string(input_str):
-    # Remove content within (), <>, and []
+    # Remove content within (), i.e., comments
     input_str = re.sub(r"\(.*?\)", "", input_str)
-    input_str = re.sub(r"\[.*?\]", "", input_str)
 
-    # Remove non-hex characters (keep only 0-9 and a-f/A-F)
+    # Remove non-hex characters, i.e., separators (= keep only 0-9 and a-f/A-F)
     hex_only = re.sub(r"[^0-9a-fA-F]", "", input_str)
 
     return hex_only

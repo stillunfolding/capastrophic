@@ -166,7 +166,7 @@ Generated CAP file is available under 'output/20250709_120026_helloworld_json.ca
 
 > [!TIP]
 > To make CAP manipulation easier, the `raw_modified` field supports optional *commenting* and *formatting*. You may:
-> - Use commenting characters: parentheses `()` or brackets `[]` to annotate or add comments. Both the grouping symbols **and the content inside them are removed before conversion**. 
+> - Use commenting characters: parentheses `()` to annotate or add comments. Both the grouping symbols (i.e., parentheses) **and the content inside them are removed before conversion**.
 > - Use separators: spaces, vertical bars `|`, angle brackets `<>` or commas to visually segment the hex string. Angle brackets can also enclose inline comments, but comments must be wrapped within valid grouping characters (see example below). All separator symbols and comments withing `<>` are removed during conversion, while the actual hex byte values remain unaffected.
 > 
 > **Example**
