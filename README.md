@@ -331,7 +331,6 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - Implement support for **Deep mode** CAP file conversion to `json2cap.py`
 - Add SCP03 support to the `scp.py` tool
 - Add logical-channel awareness to `scp.py`
-- Implement support for package/class AIDs extraction from CAP/JSON for load command for `ccm.py`
 - Add a tiny script for printing general CAP/JSON info, including package AID and classes AIDs
 - Add more logs, and load log-level from settings.
 - Add interactive mode for APDU command communication to `ccm.py`

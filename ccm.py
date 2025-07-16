@@ -10,6 +10,7 @@ from utils.cardreader import CardReader
 from utils.scp import SCP
 from utils.const import const
 from json2cap import JSON2CAP
+from cap2json import CAP2JSON
 from pathlib import Path
 
 logger = logging.getLogger("CCM")
@@ -239,6 +240,7 @@ def parse_arguments():
         "-i",
         "--instance-aid",
         type=_hexstring_to_int_list,
+        default="",
         help="Applet instance AID (in hex; default: applet's class AID)",
     )
     common_install_parser.add_argument(
@@ -304,7 +306,7 @@ def parse_arguments():
     load_parser.add_argument(
         "-p",
         "--package-aid",
-        required=True,
+        default="",
         type=_hexstring_to_int_list,
         help="AID of the package",
     )
@@ -352,6 +354,7 @@ def parse_arguments():
     load_parser.add_argument(
         "-c",
         "--applet-class-aid",
+        default="",
         type=_hexstring_to_int_list,
         help="AID of the applet class for installation (option when --install is used)",
     )
@@ -422,6 +425,27 @@ def parse_arguments():
     return args
 
 
+def get_CAP_AIDs(file_path):
+    try:
+        if file_path.lower().endswith(".json"):
+            with open(file_path, "r") as fp:
+                json_cap = json.load(fp)
+        else:
+            cap2json = CAP2JSON()
+            json_cap = cap2json.parse(file_path)
+
+        package_aid = list(bytes.fromhex(json_cap["Header.cap"]["package"]["AID"]))
+        applets_aid = [
+            list(bytes.fromhex(applet["AID"]))
+            for applet in json_cap.get("Applet.cap", {}).get("applets", [])
+        ]
+        return {"package_aid": package_aid, "applets_aid": applets_aid}
+
+    except Exception as e:
+        logger.error(f"Failed to parse CAP file and extract AIDs.")
+        return {}
+
+
 def load_settings():
     settings_path = Path("settings.json")
     if not settings_path.exists():
@@ -433,6 +457,7 @@ def load_settings():
 def main():
     args = parse_arguments()
     settings = load_settings()
+
     card_connection = CardReader()
     reader_name = args.reader or settings.get("common", {}).get("reader", "")
     if not card_connection.connect(reader_name):
@@ -475,9 +500,18 @@ def main():
             pass  # already done above
 
         case "load":
-            if ccm.load_cap(
+            cap_aids = get_CAP_AIDs(args.file)
+
+            package_aid = args.package_aid or cap_aids.get("package_aid", {})
+            if not package_aid:
+                logger.error(
+                    "Package AID required for INSTALL [for load] APDU; cannot extract from file—specify via command-line."
+                )
+                sys.exit(1)
+
+            loaded_succesfully = ccm.load_cap(
                 args.file,
-                args.package_aid,
+                package_aid,
                 args.asd_aid,  # associate security domain
                 args.load_params,
                 args.components_order,
@@ -486,31 +520,59 @@ def main():
                 args.size_position == "head",
                 args.file.lower().endswith(".json"),
                 args.json_conversion_mode,
-            ):
-                if args.install:
-                    instance_aid = (
-                        args.instance_aid
-                        if args.instance_aid
-                        else args.applet_class_aid
-                    )
-                    return ccm.install_applet(
-                        args.package_aid,
-                        args.applet_class_aid,
+            )
+
+            if loaded_succesfully and args.install:
+
+                applet_class_aid = args.applet_class_aid
+                cap_applet_classes_aid = cap_aids.get("applets_aid", [])
+
+                skip_install = False
+
+                if not applet_class_aid:
+
+                    if not cap_applet_classes_aid:
+                        logger.error(
+                            "No applet class found in the CAP file. Skipping installation!"
+                        )
+                        skip_install = True
+
+                    elif len(cap_applet_classes_aid) > 1:
+                        print("Multiple applets found in the package:")
+                        for idx, aid in enumerate(cap_applet_classes_aid):
+                            print(f"{idx}: {aid}")
+
+                        try:
+                            selected = int(
+                                input("Select the index of the applet to install: ")
+                            )
+                            if 0 <= selected < len(cap_applet_classes_aid):
+                                applet_class_aid = cap_applet_classes_aid[selected]
+                            else:
+                                logger.error(
+                                    "Invalid selection index. Skipping Installation!"
+                                )
+                                skip_install = True
+                        except ValueError:
+                            logger.error("Invalid input. Skipping installation!")
+                            skip_install = True
+
+                    else:
+                        applet_class_aid = cap_applet_classes_aid[0]
+
+                if not skip_install:
+                    instance_aid = args.instance_aid or applet_class_aid
+
+                    ccm.install_applet(
+                        package_aid,
+                        applet_class_aid,
                         instance_aid,
                         args.privileges,
                         args.install_params,
                     )
-                elif (
-                    args.applet_class_aid != args.instance_aid
-                ):  # only instance AID provided
-                    logger.error(
-                        f"Installation requires both --class-aid to be specified"
-                    )
 
         case "install":
-            instance_aid = (
-                args.instance_aid if args.instance_aid else args.applet_class_aid
-            )
+            instance_aid = args.instance_aid or args.applet_class_aid
             ccm.install_applet(
                 args.package_aid,
                 args.applet_class_aid,
