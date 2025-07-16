@@ -334,7 +334,7 @@ class EXP2JSON:
             for _ in range(export_file["export_class_count"]):
                 export_file["classes"].append(self.parse_class_info(input_file))
 
-        return json.dumps(export_file, indent=2)
+        return export_file
 
 
 def parse_arguments():
@@ -384,16 +384,16 @@ def main():
 
     try:
         exp2json = EXP2JSON()
-        json_exp = exp2json.parse(args.exp_path)
+        json_exp_str = json.dumps(exp2json.parse(args.exp_path), indent=2)
 
         if args.print:
             # with "print" it's more convenient to redirect to output file
-            print(json_exp)
+            print(json_exp_str)
 
         # If "-p" is used, writing occurs only when "-o" is also specified.
         if args.output or not args.print:
             with open(output_file_name, "w") as f:
-                f.write(json_exp)
+                f.write(json_exp_str)
                 logger.info(f"Parsed EXP file written to '{output_file_name}'")
 
     except Exception as e:

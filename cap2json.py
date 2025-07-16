@@ -1832,7 +1832,7 @@ class CAP2JSON:
         self.parse_debug_component()  # Off-card usage only, so skipped!
         self.parse_staticresources_component()  #
 
-        return json.dumps(self.cap, indent=2)
+        return self.cap
 
 
 def parse_arguments():
@@ -1882,16 +1882,16 @@ def main():
 
     try:
         cap2json = CAP2JSON()
-        json_cap = cap2json.parse(args.cap_path)
+        json_cap_str = json.dumps(cap2json.parse(args.cap_path), indent=2)
 
         if args.print:
             # with "print" it's more convenient to redirect to output file
-            print(json_cap)
+            print(json_cap_str)
 
         # If "-p" is used, writing occurs only when "-o" is also specified.
         if args.output or not args.print:
             with open(output_file_name, "w") as f:
-                f.write(json_cap)
+                f.write(json_cap_str)
                 logger.info(f"Parsed CAP file written to '{output_file_name}'")
 
     except Exception as e:
