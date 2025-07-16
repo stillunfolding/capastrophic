@@ -462,8 +462,9 @@ def load_settings():
 
 def main():
     args = parse_arguments()
-    settings = load_settings()
-
+    settings = {} if args.skip_settings else load_settings()
+    print(settings)
+    print(args.command)
     card_connection = CardReader()
     reader_name = args.reader or settings.get("common", {}).get("reader", "")
     if not card_connection.connect(reader_name):
@@ -484,17 +485,17 @@ def main():
             static_enc=args.key_enc
             or args.key
             or bytes.fromhex(
-                settings.get("common", {}).get("key_enc", const.KEY_40_4F_16B)
+                settings.get("common", {}).get("key_enc", const.KEY_40_4F_16B.hex())
             ),
             static_mac=args.key_mac
             or args.key
             or bytes.fromhex(
-                settings.get("common", {}).get("key_mac", const.KEY_40_4F_16B)
+                settings.get("common", {}).get("key_mac", const.KEY_40_4F_16B.hex())
             ),
             static_dek=args.key_dek
             or args.key
             or bytes.fromhex(
-                settings.get("common", {}).get("key_dek", const.KEY_40_4F_16B)
+                settings.get("common", {}).get("key_dek", const.KEY_40_4F_16B.hex())
             ),
             sd_aid=args.sd_aid or settings.get("common", {}).get("sd_aid", []),
         ):

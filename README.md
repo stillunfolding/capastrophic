@@ -316,6 +316,22 @@ This means:
 
 If an argument is provided via the command line, it overrides the value in `settings.json`. If not specified on the command line but available in `settings.json`, that value will be used. If neither is provided, the script will fall back to the built-in default.
 
+
+> [!CAUTION]
+> **Important Argument Order Warning**
+>
+> When using `ccm.py`, if you intend to provide a keyword command (ex. `auth`, `load`, etc.), the command shall be provided as the **first argument** after the script name.
+>
+> ✅ Correct usage:
+>
+> `./ccm.py auth -x`
+>
+> ❌ Incorrect usage (will silently ignore some flags):
+>
+> `./ccm.py -x auth`
+>
+> This is due to Python’s argparse behavior, where optional flags like -x may not be parsed correctly unless the subcommand is explicitly specified first. To ensure all options are recognized and applied as expected, always put the command (if any) before any flags or arguments.
+
 > [!TIP]
 > _Examples:_
 >
