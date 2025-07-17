@@ -384,9 +384,11 @@ A detailed mapping between Java Card versions and CAP/EXP file formats is provid
 - SCP02 (i='15', i='55'; C-MAC on modified APDU)
 
 ## To Do List
-- Add "script" command to `ccm.py` to execute a sequence of commands
+- Add "script"/"test" commands to `ccm.py` to execute a sequence of commands
 - Implement support for **Deep mode** CAP file conversion to `json2cap.py`
 - Add SCP03 support to the `scp.py` tool
+- Add sanity checks for SPC i Parameter
 - Add logical-channel awareness to `scp.py`
 - Add more logs, and load log-level from settings.
-- Add component exclusion support for `ccm.py load`. 
+- Add component exclusion support for `ccm.py load`
+- Split methods in Method component in `cap2json.py`
