@@ -272,9 +272,7 @@ class SCP:
         sd_aid=[],
     ):
 
-        self.sec_level = sec_level
-        self.is_mutually_authenticated = False
-        self._clean_keys()
+        self.reset_session()
 
         if not self.select_isd(sd_aid):
             return False
@@ -287,6 +285,7 @@ class SCP:
             return False
 
         if self.external_authenticate(sec_level):
+            self.sec_level = sec_level
             self.is_mutually_authenticated = True
             return True
         else:
