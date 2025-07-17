@@ -1,13 +1,168 @@
 {
-    "A0000000620101":{
-        "name": "javacard.framework",
-        "1.0": "Java Card 2.1.1",
-        "1.2": "Java Card 2.2.1",
-        "1.4": "Java Card 3.0.1",
-        "1.5": "Java Card 3.0.4"
-    },
     "A0000000620001":{
         "name": "java.lang",
         "1.0": "Java Card 2.1.1"
+    },
+    "A0000000620002":{
+        "name": "java.io",
+        "1.0": "Java Card 2.1.1"
+    },
+    "A0000000620003":{
+        "nama": "java.rmi",
+        "1.0": "Java Card 2.1.1",
+        "comment": "to check jc version"
+    },
+    "A0000000620101":{
+        "name": "javacard.framework",
+        "1.0": "Java Card 2.1.1",
+        "1.1": "Java Card 2.2.0",
+        "1.2": "Java Card 2.2.1",
+        "1.3": "Java Card 2.2.2",
+        "1.4": "Java Card 3.0.1",
+        "1.5": "Java Card 3.0.4",
+        "1.6": "Java Card 3.0.5u3",
+        "1.8": "Java Card 3.1.0",
+        "1.9": "Java Card 3.2.0",
+        "comment": "check v1.7 and 1.6 again"
+    },
+    "A0000000620102":{
+        "name": "javacard.security",
+        "1.0": "Java Card 2.1",
+        "1.1": "Java Card 2.1.1",
+        "1.2": "Java Card 2.2.1",
+        "1.3": "Java Card 2.2.2",
+        "1.4": "Java Card 3.0.3",
+        "1.5": "Java Card 3.0.4",
+        "1.6": "Java Card 3.0.5u3",
+        "1.7": "Java Card 3.1.0",
+        "1.8": "Java Card 3.2.0"
+    },
+    "A0000000620203":{
+        "name":"javacardx.external",
+        "1.0": "Java Card 2.2.2"
+    },
+    "a0000000090003ffffffff8910710001":{
+        "name": "sim.access"
+    },
+    "a0000000090003ffffffff8910710002":{
+        "name": "sim.toolkit"
+    },
+    "a0000000620209":{
+        "name": "javacardx.apdu",
+        "1.0": "Java Card 2.2.2"
+    },
+    "a000000062010101":{
+        "name": "javacard.framework.service",
+        "1.0": "Java Card 2.2.2"
+    },
+    "a000000062020802":{
+        "name": "javacardx.framework.math",
+        "1.0": "Java Card 2.2.2"
+    },
+    "a000000062020803":{
+        "name":"javacardx.framework.tlv",
+        "1.0": "Java Card 2.2.2"
+    },
+    "a0000000620202":{
+        "name": "javacardx.biometry",
+        "1.2": "Java Card 2.2.2",
+        "1.3": "Java Card 3.0.5u4",
+        "1.4": "Java Card 3.2"
+    },
+    "a000000062020503":{
+        "name": "javacardx.security.util",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a0000000620205": {
+        "name": "javacardx.security",
+        "1.0": "Java Card 3.0.5u3"
+    },
+    "a0000000620201": {
+        "name": "javacardx.crypto",
+        "1.0":"Java Card 2.1",
+        "1.1":"Java Card 2.1.1",
+        "1.2":"Java Card 2.2.1",
+        "1.3":"Java Card 2.2.2",
+        "1.4":"Java Card 3.0.1",
+        "1.5":"Java Card 3.0.4",
+        "1.6":"Java Card 3.0.5u3",
+        "1.7":"Java Card 3.1.0",
+        "1.8":"Java Card 3.2.0"
+    },
+    "a0000000620204":{
+        "name": "javacardx.biometry1toN",
+        "1.0": "Java Card 3.0.5u3",
+        "1.1": "Java Card 3.2.0"
+    },
+    "a000000062020801":{
+        "name": "javacardx.framework.util",
+        "1.0":"Java Card 2.2.2",
+        "1.1":"Java Card 3.0.5u3"
+    },
+    "a000000062020901":{
+        "name": "javacardx.apdu.util",
+        "1.0": "Java Card 3.0.5u3"
+    },
+    "a000000062020804":{
+        "name": "javacardx.framework.string",
+        "1.0":"Java Card 3.0.4"
+    },
+    "a000000062020501":{
+        "name":"javacardx.security.cert",
+        "1.0":"Java Card 3.1.0"
+    },
+    "a000000062020502":{
+        "name": "javacardx.security.derivation",
+        "1.0":"Java Card 3.1.0",
+        "1.1":"Java Card 3.2.0"
+    },
+    "a00000006202080101": {
+        "name": "javacardx.framework.util.intx",
+        "1.0": "Java Card 2.2.2",
+        "1.1": "Java Card 3.1.0"
+    },
+    "a000000062020805": {
+        "name": "javacardx.framework.event",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a000000062020806": {
+        "name": "javacardx.framework.nio",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a000000062020807": {
+        "name": "javacardx.framework.time",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a0000000620301": {
+        "name": "com.sun.javacard.impl",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a00000006203010e":{
+        "name": "com.sun.javacard.implBiometry",
+        "1.0": "Java Card 3.1.0"
+    },
+    "a00000015100":{
+        "name": "org.globalplatform"
+    },
+    "A00000015102":{
+        "name": "org.globalplatform.contactless"
+    },
+    "A00000015103":{
+        "name": "org.globalplatform.securechannel"
+    },
+    "A00000015104":{
+        "name": "org.globalplatform.securechannel.provider"
+    },
+    "A00000015105":{
+        "name": "org.globalplatform.privacy"
+    },
+    "A00000015106":{
+        "name": "org.globalplatform.filesystem"
+    },
+    "A00000015107":{
+        "name": "org.globalplatform.upgrade"
+    },
+    "A0000000030000":{
+        "name": "visa.openplatform"
     }
 }
