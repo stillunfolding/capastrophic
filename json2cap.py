@@ -69,8 +69,8 @@ class JSON2CAP:
                         clean_hex_string(
                             json_cap[component_name].get(
                                 "raw_modified"
-                            )  # due to "or", in case of having empty "raw_modified", the value of "raw" is used
-                            or json_cap[component_name]["raw"]
+                            )  # due to "or", in case of having empty "raw_modified", the value of "raw_original" is used
+                            or json_cap[component_name]["raw_original"]
                         )
                     )
                     cap_zip.writestr(info, component_data)

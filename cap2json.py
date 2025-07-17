@@ -839,7 +839,7 @@ class CAP2JSON:
                 filename = path.split("/")[-1]
                 if filename.lower().endswith(".cap") or filename.endswith(".capx"):
                     components[filename] = {
-                        "raw": cap_archive.read(path),
+                        "raw_original": cap_archive.read(path),
                         "raw_modified": "",
                     }
         return components
@@ -878,8 +878,8 @@ class CAP2JSON:
         if component is None:
             raise KeyError("header.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -924,8 +924,8 @@ class CAP2JSON:
         if component is None:
             raise KeyError("directory.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -999,8 +999,8 @@ class CAP2JSON:
             # ToDo: Log a warning or raise an error if this is required
             return
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1030,8 +1030,8 @@ class CAP2JSON:
         if component is None:
             raise KeyError("import.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1111,8 +1111,8 @@ class CAP2JSON:
         if component is None:
             raise KeyError("constantpool.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1189,8 +1189,8 @@ class CAP2JSON:
         if component is None:
             raise KeyError("class.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1335,8 +1335,8 @@ class CAP2JSON:
             if component is None:
                 raise KeyError("method.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
 
@@ -1439,8 +1439,8 @@ class CAP2JSON:
             # ToDo: Log a warning or raise an error if this is required
             return
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1492,8 +1492,8 @@ class CAP2JSON:
             if component is None:
                 raise KeyError("reflocation.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
 
@@ -1556,8 +1556,8 @@ class CAP2JSON:
         if component is None:
             return
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u2"] = b2i(raw_data.read(2))
@@ -1747,8 +1747,8 @@ class CAP2JSON:
             if component is None:
                 raise KeyError("descriptor.cap was not found in the components!")
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
 
@@ -1785,8 +1785,8 @@ class CAP2JSON:
         else:
             return  # debug was not found
 
-        raw_data = component["raw"]
-        component["raw"] = raw_data.hex()
+        raw_data = component["raw_original"]
+        component["raw_original"] = raw_data.hex()
         # ToDo: Implement!
 
     def parse_staticresources_component(self):
@@ -1795,8 +1795,8 @@ class CAP2JSON:
         else:
             return
 
-        raw_data = BytesIO(component["raw"])
-        component["raw"] = component["raw"].hex()
+        raw_data = BytesIO(component["raw_original"])
+        component["raw_original"] = component["raw_original"].hex()
 
         component["tag-u1"] = b2i(raw_data.read(1))
         component["size-u4"] = b2i(raw_data.read(4))
