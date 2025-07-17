@@ -431,13 +431,6 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    # As "parser" object is not available in main()
-    if args.command == "load" and args.install:
-        if not args.applet_class_aid:
-            parser.error(
-                "The --install flag requires -c/--applet-class-aid argument to be provided"
-            )
-
     return args
 
 
@@ -644,7 +637,7 @@ def main():
                         package_aid,
                         applet_class_aid,
                         instance_aid,
-                        args.privileges,
+                        args.priv,
                         args.install_params,
                     )
 
