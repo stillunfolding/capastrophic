@@ -4,7 +4,7 @@ import os
 import secrets
 from Crypto.Cipher import DES3, DES
 from .const import const
-from .gpregistry import get_parsed_gp_registry_info
+from .gpdata import get_parsed_gp_registry_info
 from zipfile import ZipFile
 
 
