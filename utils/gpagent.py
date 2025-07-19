@@ -4,11 +4,11 @@ import os
 import secrets
 from Crypto.Cipher import DES3, DES
 from .const import const
-from .gpdata import get_parsed_gp_registry_info
+from .gpdata import get_parsed_gp_registry_info, get_scp_proto_and_i_param
 from zipfile import ZipFile
 
 
-logger = logging.getLogger("SCP")
+logger = logging.getLogger("GPAgent")
 logger.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler()
 logger_formatter = logging.Formatter(
@@ -20,7 +20,7 @@ stream_handler.setFormatter(logger_formatter)
 logger.addHandler(stream_handler)
 
 
-class SCP:
+class GPAgent:
     def __init__(self, card_connection):
         self.card_connection = card_connection
         self.is_mutually_authenticated = False

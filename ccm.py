@@ -7,7 +7,7 @@ import os
 import sys
 from datetime import datetime
 from utils.cardreader import CardReader
-from utils.scp import SCP
+from utils.gpagent import GPAgent
 from utils.const import const
 from json2cap import JSON2CAP, clean_hex_string
 from cap2json import CAP2JSON, resolve_package_name
@@ -29,13 +29,13 @@ logger.addHandler(stream_handler)
 class CCM:  # Card Content Manager
     def __init__(self, card_connection):
         self.card_connection = card_connection
-        self.secure_channel_session = SCP(self.card_connection)
+        self.gpagent = GPAgent(self.card_connection)
 
     def send_apdu(self, apdu):
         return self.card_connection.send_apdu(apdu)
 
     def send_secure_apdu(self, apdu):
-        return self.secure_channel_session.send_secure_apdu(apdu)
+        return self.gpagent.send_secure_apdu(apdu)
 
     def mutual_auth(
         self,
@@ -45,7 +45,7 @@ class CCM:  # Card Content Manager
         static_dek=const.KEY_40_4F_16B,
         sd_aid=None,
     ):
-        return self.secure_channel_session.mutual_auth(
+        return self.gpagent.mutual_auth(
             sec_level, static_enc, static_mac, static_dek, sd_aid
         )
 
@@ -101,7 +101,7 @@ class CCM:  # Card Content Manager
         else:
             cap_file_path = file_path
 
-        return self.secure_channel_session.load_cap(
+        return self.gpagent.load_cap(
             cap_file_path,
             cap_aid,
             sd_aid,
@@ -120,12 +120,12 @@ class CCM:  # Card Content Manager
         priviledges=[],
         install_params=[],
     ):
-        return self.secure_channel_session.install_applet(
+        return self.gpagent.install_applet(
             cap_aid, applet_class_aid, instance_aid, priviledges, install_params
         )
 
     def list_content(self, deprecated_data_structure=False):
-        applications_info, packages_info = self.secure_channel_session.list_content(
+        applications_info, packages_info = self.gpagent.list_content(
             deprecated_data_structure
         )
 
@@ -150,7 +150,7 @@ class CCM:  # Card Content Manager
             print()
 
     def delete_content(self, aid):
-        return self.secure_channel_session.delete_content(aid)
+        return self.gpagent.delete_content(aid)
 
 
 def _hexstring_to_byte_seq(hexstring):
