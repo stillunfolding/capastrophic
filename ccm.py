@@ -133,8 +133,9 @@ class CCM:  # Card Content Manager
         print("::: Card Content :::\n")
         for applet in applications_info:
             aid, lifecycle, privilege, assiciated_package = applet
+            app_type = "APP" if "Security Domain" not in privilege else "SD"
             print(
-                f"APP: {bytes(aid).hex().upper()} (LC: {lifecycle}, Priv: {privilege})\n"
+                f"{app_type}: {bytes(aid).hex().upper()} (LC: {lifecycle}, Priv: {privilege})\n"
             )
             if assiciated_package:
                 print(f"\tPKG: {bytes(assiciated_package).hex().upper()}")
