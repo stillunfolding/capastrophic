@@ -174,3 +174,17 @@ def get_parsed_gp_registry_info(applications_info, packages_info):
             parsed_packages_info.append([aid, life_cycle, applet_classes, version])
 
     return (parsed_applications_info, parsed_packages_info)
+
+
+def get_parsed_scp_proto_and_i_param(card_recognition_data):
+    parsed_crd = parse_ber_tlv(card_recognition_data)
+
+    scp_proto_and_i_param_info = defaultdict(list)
+    for element in find_all_nested_tags(parsed_crd, ["66", "73", "64"]):
+        application_tag4_oid_tag_list = find_all_nested_tags(element, ["06"])
+
+        for item in application_tag4_oid_tag_list:
+            scp_proto, i_param = list(bytes.fromhex(item))[-2:]
+            scp_proto_and_i_param_info[f"SCP{scp_proto:02x}"].append(i_param)
+
+    return scp_proto_and_i_param_info
