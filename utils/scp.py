@@ -578,6 +578,7 @@ class SCP:
             return None
 
         # data type constains
+        P1_ISD_INFO = 0x80
         P1_APPLICATIONS_INFO = 0x40
         P1_PACKAGES_INFO = 0x10
 
@@ -586,7 +587,25 @@ class SCP:
         P2_GET_ALL = 0x00 | data_struct
         P2_GET_NEXT = 0x01 | data_struct
 
-        applications_info, sw1, sw2 = self.send_secure_apdu(
+        # ISD
+        ISD_status_info, sw1, sw2 = self.send_secure_apdu(
+            [0x80, 0xF2, P1_ISD_INFO, P2_GET_ALL, 0x02, 0x4F, 0x00]
+        )
+        while (sw1, sw2) == (0x63, 0x10):
+            get_status_isd_apdu = [
+                0x80,
+                0xF2,
+                P1_ISD_INFO,
+                P2_GET_NEXT,
+                0x02,
+                0x4F,
+                0x00,
+            ]
+            next_info, sw1, sw2 = self.send_secure_apdu(get_status_isd_apdu)
+            ISD_status_info += next_info
+
+        # Applets and SSDs
+        applications_status_resp_data, sw1, sw2 = self.send_secure_apdu(
             [0x80, 0xF2, P1_APPLICATIONS_INFO, P2_GET_ALL, 0x02, 0x4F, 0x00]
         )
         while (sw1, sw2) == (0x63, 0x10):
@@ -600,9 +619,10 @@ class SCP:
                 0x00,
             ]
             next_info, sw1, sw2 = self.send_secure_apdu(get_status_applets_apdu)
-            applications_info += next_info
+            applications_status_resp_data += next_info
 
-        packages_info, sw1, sw2 = self.send_secure_apdu(
+        # Packages
+        packages_status_resp_data, sw1, sw2 = self.send_secure_apdu(
             [0x80, 0xF2, P1_PACKAGES_INFO, P2_GET_ALL, 0x02, 0x4F, 0x00]
         )
         while (sw1, sw2) == (0x63, 0x10):
@@ -616,10 +636,10 @@ class SCP:
                 0x00,
             ]
             next_info, sw1, sw2 = self.send_secure_apdu(get_status_packages_apdu)
-            packages_info += next_info
+            packages_status_resp_data += next_info
 
         applications_info, packages_info = get_parsed_gp_registry_info(
-            applications_info, packages_info
+            ISD_status_info + applications_status_resp_data, packages_status_resp_data
         )
         return applications_info, packages_info
 

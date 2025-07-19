@@ -1,115 +1,8 @@
 from collections import defaultdict
-from typing import List, Dict, Tuple, Optional
+from .tlvparser import parse_ber_tlv, find_all_nested_tags
 
 COMPONENT_TYPE_PKG = 0
 COMPONENT_TYPE_APP = 1
-
-
-def _read_tag(buf: bytes, i: int) -> Tuple[int, int]:
-    """Return (tag_int, new_index)."""
-    tag = buf[i]
-    i += 1
-    if tag & 0x1F == 0x1F:  # multi‑byte tag
-        tag = (tag << 8) | buf[i]
-        i += 1
-    return tag, i
-
-
-def _read_length(buf: bytes, i: int) -> Tuple[int, int]:
-    """Return (length, new_index)."""
-    length = buf[i]
-    i += 1
-    if length & 0x80:  # long‑form length (0x81 or 0x82 expected)
-        num_len_bytes = length & 0x7F
-        length = int.from_bytes(buf[i : i + num_len_bytes], "big")
-        i += num_len_bytes
-    return length, i
-
-
-def _read_value(buf: bytes, i: int, length: int) -> Tuple[bytes, int]:
-    """Return (value_bytes, new_index)."""
-    return buf[i : i + length], i + length
-
-
-def parse_tlv(
-    buf: bytes, start: int = 0, end: Optional[int] = None
-) -> List[Tuple[int, bytes]]:
-    """Parse a flat TLV sequence into a list of (tag, value) tuples."""
-    end = len(buf) if end is None else end
-    out = []
-    i = start
-    while i < end:
-        tag, i = _read_tag(buf, i)
-        length, i = _read_length(buf, i)
-        value, i = _read_value(buf, i, length)
-        out.append((tag, value))
-    return out
-
-
-def parse_e3_sequence(
-    buf: List[int], is_packages_info: bool = False
-) -> List[Dict[str, object]]:
-    """
-    Split the top‑level stream into E3 elements, then decode the inner tags
-    according to the supplied specification.
-    """
-    buf = bytes(buf)
-
-    results = []
-
-    i = 0
-    while i < len(buf):
-        # --- expect E3 container -------------------------------------------
-        tag, i_ = _read_tag(buf, i)
-        if tag != 0xE3:
-            raise ValueError(f"Expected tag 0xE3 at byte {i}, found {tag:02X}")
-        length, i_ = _read_length(buf, i_)
-        value_start = i_
-        value_end = value_start + length
-        i = value_end  # advance to next E3
-
-        inner = parse_tlv(buf, value_start, value_end)  # list[(tag,val)]
-
-        elem: Dict[str, object] = defaultdict(list)
-        tag_map = {
-            0x4F: "aid",
-            0x84: "applet_classes_aid",
-            0x9F7F: "life_cycle",
-            0xC5: "priv",
-            0xCF: "selection_param",
-            0xC4: "associated_package",
-            0xCC: "associated_sd",
-            0xCE: "package_version",
-        }
-
-        for tag_int, val in inner:
-            key = tag_map.get(tag_int)
-            if key is None:
-                continue  # ignore unexpected tags
-            if key == "selection_param":  # repeatable
-                elem[key].append(val)
-            elif key == "applet_classes_aid":  # repeatable
-                elem[key].append(list(val))
-            elif key in elem:
-                raise ValueError(f"Duplicate single‑occurrence tag {tag_int:02X}")
-            elif key in ("aid", "associated_sd", "associated_package"):
-                elem[key] = list(val)
-            elif key == "life_cycle":
-                elem[key] = _get_life_cycle_str(ord(val))
-            elif key == "package_version":
-                elem[key] = val.hex()
-            elif key == "priv":
-                elem[key] = _get_priv_str(list(val))
-            else:
-                elem[key] = val
-
-        # normalise optional non‑repeatable fields that did not appear
-        elem.setdefault("package_version", "-")
-        elem.setdefault("life_cycle", "-")
-
-        results.append(elem)
-
-    return results
 
 
 def _get_life_cycle_str(life_cycle_int, component_type):
@@ -182,12 +75,40 @@ def get_parsed_gp_registry_info(applications_info, packages_info):
     GP_REGISTRY_RELATED_DATA_TAG = 0xE3
 
     if applications_info[0] == GP_REGISTRY_RELATED_DATA_TAG:
-        parsed_e3_sequences = parse_e3_sequence(applications_info)
+        parsed_tlv = parse_ber_tlv(applications_info)
+        e3_elements = find_all_nested_tags(parsed_tlv, ["E3"])
+
+        applications = list()
+        for element in e3_elements:
+
+            app_info = defaultdict(list)
+            for tlv in element:
+                tag = tlv["tag"]
+                value = tlv["value"]
+
+                if tag == "4F":
+                    app_info["aid"] = list(bytes.fromhex(value))
+                elif tag == "9F70":
+                    app_info["life_cycle"] = _get_life_cycle_str(
+                        int(value, 16), COMPONENT_TYPE_APP
+                    )
+                elif tag == "C5":
+                    app_info["priv"] = _get_priv_str(list(bytes.fromhex(value)))
+                elif tag == "C4":
+                    app_info["associated_package"] = list(bytes.fromhex(value))
+
+            applications.append(app_info)
 
         parsed_applications_info = [
-            [item["aid"], item["life_cycle"], item["priv"], item["associated_package"]]
-            for item in parsed_e3_sequences
+            [
+                app["aid"],
+                app.get("life_cycle", "-"),
+                app.get("priv", "-"),
+                app.get("associated_package", []),
+            ]
+            for app in applications
         ]
+
     else:  # The deprecated data structure, where P2.B2 is 0 in the GET STATUS APDU command.
         parsed_applications_info = list()
         while len(applications_info):
@@ -203,16 +124,38 @@ def get_parsed_gp_registry_info(applications_info, packages_info):
             )
 
     if packages_info[0] == GP_REGISTRY_RELATED_DATA_TAG:
-        parsed_e3_sequences = parse_e3_sequence(packages_info)
+        parsed_tlv = parse_ber_tlv(packages_info)
+        e3_elements = find_all_nested_tags(parsed_tlv, ["E3"])
+
+        packages = list()
+        for element in e3_elements:
+            pkg_info = defaultdict(list)
+            for tlv in element:
+                tag = tlv["tag"]
+                value = tlv["value"]
+                if tag == "4F":
+                    pkg_info["aid"] = list(bytes.fromhex(value))
+                if tag == "9F70":
+                    pkg_info["life_cycle"] = _get_life_cycle_str(
+                        int(value, 16), COMPONENT_TYPE_PKG
+                    )
+                if tag == "84":
+                    pkg_info["applet_classes_aid"].append(list(bytes.fromhex(value)))
+                if tag == "CE":
+                    pkg_info["package_version"] = list(bytes.fromhex(value))
+
+            packages.append(pkg_info)
+
         parsed_packages_info = [
             [
-                item["aid"],
-                item["life_cycle"],
-                item["applet_classes_aid"],
-                item["package_version"],
+                pkg["aid"],
+                pkg.get("life_cycle", "-"),
+                pkg.get("applet_classes_aid", []),
+                pkg.get("package_version", "-"),
             ]
-            for item in parsed_e3_sequences
+            for pkg in packages
         ]
+
     else:  # The deprecated structure, where P2.B2 is 0 in the GET STATUS APDU command.
         parsed_packages_info = list()
         while len(packages_info):
