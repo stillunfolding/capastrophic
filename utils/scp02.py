@@ -130,46 +130,22 @@ class SCP02:
 
             return False
 
-    def _calc_session_keys(self):
+    def _calc_session_key(self, static_key, derivation_const, sequence_counter):
         # GP Specification
         # derivation_data = DERIVATION_CONST_xxx | sequence_counter |  00 00 00 00 00 00 00 00 00 00 00 00
         # IV = 00 00 00 00 00 00 00 00
         # S_xxx = encrypt(TDES_CBC, K_xxx, IV, derivation_data)
 
-        session_enc_derivation_data = (
-            const.GP_DERIVATION_CONST_ENC_SESSION_KEY
-            + self.sequence_counter
-            + bytes.fromhex("000000000000000000000000")
-        )
-        session_mac_derivation_data = (
-            const.GP_DERIVATION_CONST_MAC_SESSION_KEY
-            + self.sequence_counter
-            + bytes.fromhex("000000000000000000000000")
-        )
-        session_dek_derivation_data = (
-            const.GP_DERIVATION_CONST_DEK_SESSION_KEY
-            + self.sequence_counter
+        session_key_derivation_data = (
+            derivation_const
+            + sequence_counter
             + bytes.fromhex("000000000000000000000000")
         )
 
-        cipher1 = DES3.new(self.static_enc, DES3.MODE_CBC, const.ZERO_IV_8B)
-        cipher2 = DES3.new(self.static_mac, DES3.MODE_CBC, const.ZERO_IV_8B)
-        cipher3 = DES3.new(self.static_dek, DES3.MODE_CBC, const.ZERO_IV_8B)
+        cipher = DES3.new(static_key, DES3.MODE_CBC, const.ZERO_IV_8B)
+        session_key_parts = cipher.encrypt(session_key_derivation_data)
 
-        session_enc_key_parts = cipher1.encrypt(session_enc_derivation_data)
-        session_mac_key_parts = cipher2.encrypt(session_mac_derivation_data)
-        session_dek_key_parts = cipher3.encrypt(session_dek_derivation_data)
-
-        self.session_enc = session_enc_key_parts + session_enc_key_parts[:8]
-        self.session_mac = session_mac_key_parts + session_mac_key_parts[:8]
-        self.session_dek = session_dek_key_parts + session_dek_key_parts[:8]
-
-        logger.debug(
-            f"Static ENC: {self.static_enc.hex()}, Static MAC: {self.static_mac.hex()}, Static DEK: {self.static_dek.hex()}"
-        )
-        logger.debug(
-            f"Session ENC: {self.session_enc.hex()}, Session MAC: {self.session_mac.hex()}, Session DEK: {self.session_dek.hex()}"
-        )
+        return session_key_parts + session_key_parts[:8]
 
     def initialize_update(self):
         self.reset_session()
@@ -183,14 +159,34 @@ class SCP02:
             logger.error("Unexpected INIT UPDATE APDU response")
             return False
 
-        self.diversification_data = bytes(resp_data[:10])
-        self.key_information = bytes(resp_data[10:12])
+        _ = bytes(resp_data[:10])  # diversification_data
+        _ = bytes(resp_data[10:12])  # key_information
         self.sequence_counter = bytes(resp_data[12:14])
         self.card_challenge = bytes(resp_data[14:20])
-        self.card_cryptogram = bytes(resp_data[20:])
+        card_cryptogram = bytes(resp_data[20:])
 
-        self._calc_session_keys()
+        self.session_enc = self._calc_session_key(
+            self.static_enc,
+            const.SCP02_GP_DERIVATION_CONST_ENC_SESSION_KEY,
+            self.sequence_counter,
+        )
+        self.session_mac = self._calc_session_key(
+            self.static_mac,
+            const.SCP02_GP_DERIVATION_CONST_MAC_SESSION_KEY,
+            self.sequence_counter,
+        )
+        self.session_dek = self._calc_session_key(
+            self.static_dek,
+            const.SCP02_GP_DERIVATION_CONST_DEK_SESSION_KEY,
+            self.sequence_counter,
+        )
 
+        logger.debug(
+            f"Static ENC: {self.static_enc.hex()}, Static MAC: {self.static_mac.hex()}, Static DEK: {self.static_dek.hex()}"
+        )
+        logger.debug(
+            f"Session ENC: {self.session_enc.hex()}, Session MAC: {self.session_mac.hex()}, Session DEK: {self.session_dek.hex()}"
+        )
         # GP Specification
         # PADDING_DES = "80 00 00 00 00 00 00 00"
         # card_auth_data = host_challenge | sequence_counter | card_challenge | PADDING_DES
@@ -205,11 +201,11 @@ class SCP02:
         )
 
         des3_cipher = DES3.new(self.session_enc, DES3.MODE_CBC, const.ZERO_IV_8B)
-        card_cryptogram = (des3_cipher.encrypt(card_auth_data))[-8:]
+        expected_card_cryptogram = (des3_cipher.encrypt(card_auth_data))[-8:]
 
         # Let's verify INIT UPDATE response
-        if card_cryptogram != self.card_cryptogram:
-            logger.error("Wrong ISD Keys! Stop Trying!")
+        if expected_card_cryptogram != card_cryptogram:
+            logger.error("Unexpected Card Cryptogram! Wrong ISD Keys! Stop Trying!")
             return False
 
         return True

@@ -5,6 +5,7 @@ from .const import const
 from .gpdata import get_parsed_gp_registry_info, get_parsed_scp_proto_and_i_param
 from zipfile import ZipFile
 from .scp02 import SCP02
+from .scp03 import SCP03
 
 logger = logging.getLogger("GPAgent")
 logger.setLevel(logging.INFO)
@@ -81,7 +82,7 @@ class GPAgent:
         scp02_i_params = scp_and_i_param_list_info["SCP02"]
         scp03_i_params = scp_and_i_param_list_info["SCP03"]
 
-        if 0x15 in scp02_i_params or 0x50 in scp02_i_params:
+        if 0x15 in scp02_i_params or 0x55 in scp02_i_params:
             self.scp_imp = SCP02(
                 self.card_connection, static_enc, static_mac, static_dek
             )
