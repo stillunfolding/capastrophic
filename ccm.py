@@ -32,10 +32,10 @@ class CCM:  # Card Content Manager
         self.gpagent = GPAgent(self.card_connection)
 
     def send_apdu(self, apdu):
-        return self.card_connection.send_apdu(apdu)
-
-    def send_secure_apdu(self, apdu):
-        return self.gpagent.send_secure_apdu(apdu)
+        # While we can send APDUs here using self.card_connection,
+        # it's easier to pass the APDUs to GPAgent as it checks and update
+        # the secure channel session status as well.
+        return self.gpagent.send_apdu(apdu)
 
     def mutual_auth(
         self,
@@ -668,7 +668,7 @@ def main():
     # handle "-a/--apdu"
     if args.apdu:
         for apdu in args.apdu:
-            ccm.send_secure_apdu(apdu)
+            ccm.send_apdu(apdu)
 
     # handle "-I/--interactive"
     if args.interactive:
@@ -689,7 +689,7 @@ def main():
                     break
 
                 hex_string = clean_hex_string(user_input)
-                ccm.send_secure_apdu(list(bytes.fromhex(hex_string)))
+                ccm.send_apdu(list(bytes.fromhex(hex_string)))
 
             except ValueError:
                 logger.error(

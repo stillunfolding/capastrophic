@@ -23,6 +23,13 @@ class GPAgent:
     def __init__(self, card_connection):
         self.card_connection = card_connection
         self.is_mutually_authenticated = False
+        self.scp_imp = None
+
+    def send_apdu(self, apdu):
+        if self.is_mutually_authenticated and self.scp_imp:
+            return self.scp_imp.send_secure_apdu(apdu)
+        else:
+            return self.card_connection.send_apdu(apdu)
 
     def select_isd(self, sd_aid):
 
