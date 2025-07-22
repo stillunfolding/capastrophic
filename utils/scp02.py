@@ -102,7 +102,7 @@ class SCP02:
         host_auth_data = (
             self.sequence_counter
             + self.card_challenge
-            + bytes(self.host_challenge)
+            + self.host_challenge
             + PADDING_DES
         )
 
@@ -150,8 +150,8 @@ class SCP02:
     def initialize_update(self):
         self.reset_session()
 
-        self.host_challenge = list(secrets.token_bytes(8))
-        init_update_apdu = [0x80, 0x50, 0x00, 0x00, 0x08] + self.host_challenge
+        self.host_challenge = secrets.token_bytes(8)
+        init_update_apdu = [0x80, 0x50, 0x00, 0x00, 0x08] + list(self.host_challenge)
 
         resp_data, sw1, sw2 = self.card_connection.send_apdu(init_update_apdu)
 
@@ -194,7 +194,7 @@ class SCP02:
         PADDING_DES = bytes.fromhex("8000000000000000")
 
         card_auth_data = (
-            bytes(self.host_challenge)
+            self.host_challenge
             + self.sequence_counter
             + self.card_challenge
             + PADDING_DES

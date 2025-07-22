@@ -16,6 +16,12 @@ class const:
     ZERO_IV_8B = b"\x00" * 8
     ZERO_IV_16B = b"\x00" * 16
 
+    SCP_PROTO_SCP02 = "SCP02"
+    SCP_PROTO_SCP03 = "SCP03"
+    SCP_PROTO_NONE = "NONE"
+
+    KEY_LENGTH_2K3DES = 16
+
     # SCP02
     SCP02_GP_DERIVATION_CONST_ENC_SESSION_KEY = bytes.fromhex("0182")
     SCP02_GP_DERIVATION_CONST_MAC_SESSION_KEY = bytes.fromhex("0101")

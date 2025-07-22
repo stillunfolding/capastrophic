@@ -32,8 +32,8 @@ class CCM:  # Card Content Manager
         self.gpagent = GPAgent(self.card_connection)
 
     def send_apdu(self, apdu):
-        # While we can send APDUs here using self.card_connection,
-        # it's easier to pass the APDUs to GPAgent as it checks and update
+        # While we can send APDUs here using self.card_connection, it's
+        # easier to pass the APDUs to GPAgent as it checks and updates
         # the secure channel session status as well.
         return self.gpagent.send_apdu(apdu)
 

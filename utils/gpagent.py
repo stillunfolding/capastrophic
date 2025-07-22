@@ -2,7 +2,11 @@ import logging
 import pathlib
 import os
 from .const import const
-from .gpdata import get_parsed_gp_registry_info, get_parsed_scp_proto_and_i_param
+from .gpdata import (
+    get_parsed_gp_registry_info,
+    get_scp_proto_and_i_param,
+    get_parsed_key_info,
+)
 from zipfile import ZipFile
 from .scp02 import SCP02
 from .scp03 import SCP03
@@ -64,12 +68,140 @@ class GPAgent:
         self.sd_aid = sd_aid
         return True
 
-    def _get_scp_and_i_param_info(self):
-        CRD_TAG = [0x00, 0x66]
-        card_recognition_data, sw1, sw2 = self.card_connection.send_apdu(
-            [0x80, 0xCA, CRD_TAG[0], CRD_TAG[1], 0x00]
+    def activeSCPInfoDetection(self, parsed_keys_info):
+        resp_data, sw1, sw2 = self.send_apdu(
+            [
+                0x80,
+                0x50,
+                0x00,
+                0x00,
+                0x08,
+            ]
+            + [
+                0x00,
+            ]
+            * 8
         )
-        return get_parsed_scp_proto_and_i_param(card_recognition_data)
+
+        # Longer challenge is expected (Implicitly it means we have SCP03 in S16 mode)
+        if (sw1, sw2) == (0x67, 0x00):
+            resp_data, sw1, sw2 = self.send_apdu(
+                [
+                    0x80,
+                    0x50,
+                    0x00,
+                    0x00,
+                    0x10,
+                ]
+                + [
+                    0x00,
+                ]
+                * 16
+            )
+
+        # Active Fallback failed!
+        if (sw1, sw2) != (0x90, 0x00):
+            return const.SCP_PROTO_NONE, None, None
+
+        key_version, scp_proto = resp_data[10:12]
+
+        if scp_proto == 0x02:
+            # We make an assumption for the implementation param "i"!
+            return const.SCP_PROTO_SCP02, 0x15, const.KEY_LENGTH_2K3DES
+
+        if scp_proto == 0x03:
+            for key in parsed_keys_info:
+                if key["key_id"] == "01" and key["key_version"] == key_version:
+                    return (
+                        const.SCP_PROTO_SCP03,
+                        resp_data[12],
+                        key["components"].get("length"),
+                    )
+
+        return const.SCP_PROTO_NONE, None, None
+
+    def determineSCPAndKeyLength(self):
+        CRD_TAG = [0x00, 0x66]
+        KEY_INFO_TAG = [0x00, 0xE0]
+
+        card_recognition_data, _, _ = self.card_connection.send_apdu(
+            [0x80, 0xCA, *CRD_TAG, 0x00]
+        )
+        scp_proto_i_param = get_scp_proto_and_i_param(card_recognition_data)
+
+        keys_info, _, _ = self.card_connection.send_apdu(
+            [0x80, 0xCA, *KEY_INFO_TAG, 0x00]
+        )
+
+        parsed_keys_info = get_parsed_key_info(keys_info)
+
+        scp02_i_param = scp_proto_i_param.get(const.SCP_PROTO_SCP02, None)
+        scp03_i_param = scp_proto_i_param.get(const.SCP_PROTO_SCP03, None)
+
+        if scp02_i_param and not scp03_i_param:
+            return const.SCP_PROTO_SCP02, scp02_i_param, const.KEY_LENGTH_2K3DES
+
+        elif scp03_i_param and not scp02_i_param:
+            # Assumption: The first AES key with KeyID = 0x01 in the Key Info Data element
+            # is assumed to be the key used for Secure Channel Protocol (SCP) when P1 = 0x00
+            # in the INIT UPDATE command. (TODO: Verify and clarify this assumption.)
+            for key in parsed_keys_info:
+                if key["key_id"] != "01":
+                    continue
+
+                for component in key.get("components", []):
+                    if component.get("type") == "AES":
+                        return (
+                            const.SCP_PROTO_SCP03,
+                            scp03_i_param,
+                            component.get("length"),
+                        )
+
+        elif scp02_i_param and scp03_i_param:  # Both are supported
+            # Assumption: The first AES/DES key with KeyID = 0x01 in the Key Info Data element
+            # is assumed to be the key used for Secure Channel Protocol (SCP) when P1 = 0x00
+            # in the INIT UPDATE command. (TODO: Verify and clarify this assumption.)
+            for key in parsed_keys_info:
+                if key["key_id"] != "01":
+                    continue
+
+                for component in key.get("components", []):
+                    if component.get("type") == "AES":
+                        return (
+                            const.SCP_PROTO_SCP03,
+                            scp03_i_param,
+                            component.get("length"),
+                        )
+                    if component.get("type") == "DES":
+                        return (
+                            const.SCP_PROTO_SCP02,
+                            scp02_i_param,
+                            component.get("length"),
+                        )
+
+            # Fallback! check all other keys if KeyID = 0x01 didn't provide an expected outcome (AES/DES)
+            for key in parsed_keys_info:
+                if key["key_id"] != "01":
+                    continue
+
+                for component in key.get("components", []):
+                    if component.get("type") == "AES":
+                        return (
+                            const.SCP_PROTO_SCP03,
+                            scp03_i_param,
+                            component.get("length"),
+                        )
+                    if component.get("type") == "DES":
+                        return (
+                            const.SCP_PROTO_SCP02,
+                            scp02_i_param,
+                            component.get("length"),
+                        )
+
+        logger.debug(
+            "Active Fallback: SCP info detection by sending a redundant INIT-UPDATE command!"
+        )
+        return self.activeSCPInfoDetection(parsed_keys_info)
 
     def mutual_auth(
         self,
@@ -84,27 +216,47 @@ class GPAgent:
         if not self.select_isd(sd_aid):
             return False
 
-        scp_and_i_param_list_info = self._get_scp_and_i_param_info()
+        protocol, i_param, keylength = self.determineSCPAndKeyLength()
 
-        scp02_i_params = scp_and_i_param_list_info["SCP02"]
-        scp03_i_params = scp_and_i_param_list_info["SCP03"]
+        match protocol:
+            case const.SCP_PROTO_SCP02:
+                if i_param in (0x15, 0x55):
+                    self.scp_imp = SCP02(
+                        self.card_connection, static_enc, static_mac, static_dek
+                    )
+                else:
+                    logger.error(f"SCP Protocol not implemented!")
+                    return False
 
-        if 0x15 in scp02_i_params or 0x55 in scp02_i_params:
-            self.scp_imp = SCP02(
-                self.card_connection, static_enc, static_mac, static_dek
-            )
-        else:
-            logger.error(f"SCP Protocol not implemented!")
-            return False
+            case const.SCP_PROTO_SCP03:
+                self.scp_imp = SCP03(
+                    self.card_connection,
+                    static_enc
+                    * (
+                        keylength // len(static_mac)
+                    ),  # if 4041...4F used instead of full 32B (4041...4F4041...4F)
+                    static_mac
+                    * (
+                        keylength // len(static_mac)
+                    ),  # if 4041...4F used instead of full 32B (4041...4F4041...4F)
+                    static_dek
+                    * (
+                        keylength // len(static_mac)
+                    ),  # if 4041...4F used instead of full 32B (4041...4F4041...4F)
+                    i_param,
+                )
+            case _:
+                logger.error(f"Implemented SCP Protocol is not supported!")
+                return False
 
         if not self.scp_imp.initialize_update():
             return False
 
-        if self.scp_imp.external_authenticate(sec_level):
-            self.is_mutually_authenticated = True
-            return True
-        else:
+        if not self.scp_imp.external_authenticate(sec_level):
             return False
+
+        self.is_mutually_authenticated = True
+        return True
 
     def _get_reordered_components(
         self, components, components_order, apply_order_to_head
