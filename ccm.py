@@ -536,7 +536,7 @@ def main():
 
     ccm = CCM(card_connection)
 
-    if args.command or args.secure_apdu:
+    if args.command or args.secure_apdu or args.list:
 
         sec_level = (
             args.sec_level
