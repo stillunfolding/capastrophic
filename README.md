@@ -14,10 +14,9 @@ Capastrophic is a JCVM training [and testing] toolkit designed specifically for 
 Except for the `ccm.py` (Card Content Manager) tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
 
 > [!IMPORTANT]
-> **Python 3.7 or newer is required.**
+> **Python 3.10 or newer is required.**
 >
-> The parser scripts rely on dictionary insertion order when generating JSON output.
-> In versions of Python prior to 3.7, dictionaries do not guarantee element order, which may lead to incorrect or inconsistent analysis results.
+> The parser scripts and other tools require Python 3.10 or newer due to the use of modern language features such as structural pattern matching (match/case) that are not available in earlier versions.
 
 > [!TIP]
 > To install the required libraries, run:
