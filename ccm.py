@@ -610,11 +610,12 @@ def handle_interactive_mode(
                     last_args["ld_package_aid"] = args[1]
 
                 # Use cached args if missing
-                file = last_args.get("ld_file")
-                package_aid = h2l(last_args.get("ld_package_aid"))
+                file = last_args.get("ld_file", "")
+                package_aid = h2l(last_args.get("ld_package_aid", ""))
 
                 if file and package_aid:
-                    ccm.load_file(file, package_aid)
+                    is_json = file.lower().endswith("json")
+                    ccm.load_file(file, package_aid, from_json=is_json)
                 else:
                     logger.error(
                         "Both file path and package AID must be provided at least once before using 'load' with missing arguments."
@@ -638,9 +639,9 @@ def handle_interactive_mode(
                     last_args["i_instance_aid"] = args[2]
 
                 # Use cached args if missing
-                package_aid = h2l(last_args.get("i_package_aid"))
-                class_aid = h2l(last_args.get("i_class_aid"))
-                instance_aid = h2l(last_args.get("i_instance_aid"))
+                package_aid = h2l(last_args.get("i_package_aid", ""))
+                class_aid = h2l(last_args.get("i_class_aid", ""))
+                instance_aid = h2l(last_args.get("i_instance_aid", ""))
 
                 if package_aid and class_aid and instance_aid:
                     ccm.install_applet(package_aid, class_aid, instance_aid)
@@ -656,8 +657,25 @@ def handle_interactive_mode(
                 continue
 
             elif user_input.lower().startswith(("d", "delete")):
-                aid = h2l(user_input.split(" ", 1)[1])
-                ccm.delete_content(aid)
+                # Expected input: d|delete [AID]
+                parts = user_input.split()
+                cmd = parts[0]
+                args = parts[1:]
+
+                # Update cached args if provided
+                if len(args) >= 1:
+                    last_args["d_aid"] = args[0]
+
+                # Use cached args if missing
+                aid = h2l(last_args.get("d_aid", ""))
+
+                if aid:
+                    ccm.delete_content(aid)
+                else:
+                    logger.error(
+                        "AID must be provided at least once before using 'delete' with missing argument."
+                    )
+
                 continue
 
             hex_string = clean_hex_string(user_input.lower().replace("0x", ""))
