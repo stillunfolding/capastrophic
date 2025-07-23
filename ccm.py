@@ -26,10 +26,13 @@ except ImportError:
 
 # Setup completer for file paths
 def path_completer(text, state):
-    # Expand ~ and environment vars
-    expanded = os.path.expanduser(os.path.expandvars(text))
-    # Get all matching paths
-    matches = glob.glob(expanded + "*")
+    if readline.get_line_buffer() == "":
+        matches = ["help", "auth", "load", "install", "list", "delete", "quit", "<APDU>"]
+    else:
+        # Expand ~ and environment vars
+        expanded = os.path.expanduser(os.path.expandvars(text))
+        # Get all matching paths
+        matches = glob.glob(expanded + "*")
     try:
         return matches[state]
     except IndexError:
