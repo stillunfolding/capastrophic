@@ -26,6 +26,16 @@ stream_handler.setFormatter(logger_formatter)
 logger.addHandler(stream_handler)
 
 
+def h2b(hexstring):
+    """Hex String to Byte Sequence"""
+    return bytes.fromhex(hexstring)
+
+
+def h2l(hexstring):
+    """Hex String to List of Integers"""
+    return list(h2b(hexstring))
+
+
 class CCM:  # Card Content Manager
     def __init__(self, card_connection):
         self.card_connection = card_connection
@@ -82,7 +92,7 @@ class CCM:  # Card Content Manager
             logger.exception(f"Unexpected error during automatic CAP generation: {e}")
             sys.exit(1)
 
-    def load_cap(
+    def load_file(
         self,
         file_path,
         cap_aid,  # = package AID in compact format
@@ -153,14 +163,6 @@ class CCM:  # Card Content Manager
         return self.gpagent.delete_content(aid)
 
 
-def _hexstring_to_byte_seq(hexstring):
-    return bytes.fromhex(hexstring)
-
-
-def _hexstring_to_int_list(hexstring):
-    return list(bytes.fromhex(hexstring))
-
-
 def parse_arguments():
     # parent parser with common arguments
     common_parser = argparse.ArgumentParser(add_help=False)
@@ -182,7 +184,7 @@ def parse_arguments():
         "--apdu",
         nargs="+",
         default=[],
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="APDU command[s] to send to the card (hex format)",
     )
     common_parser.add_argument(
@@ -205,32 +207,32 @@ def parse_arguments():
     ccm_command_common_parser.add_argument(
         "--sd-aid",
         default="",
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="Security domain AID",
     )
     ccm_command_common_parser.add_argument(
         "--key-enc",
         default="",  # defualt is set to 40...4F after checking settings.json!
-        type=_hexstring_to_byte_seq,
+        type=h2b,
         help="SCP encryption key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "--key-mac",
         default="",  # defualt is set to 40...4F after checking settings.json!
-        type=_hexstring_to_byte_seq,
+        type=h2b,
         help="SCP MAC key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "--key-dek",
         default="",  # defualt is set to 40...4F after checking settings.json!
-        type=_hexstring_to_byte_seq,
+        type=h2b,
         help="SCP DEK key (default: 40...4F)",
     )
     ccm_command_common_parser.add_argument(
         "-k",
         "--key",
         default="",
-        type=_hexstring_to_byte_seq,
+        type=h2b,
         help="SCP keys (to be used when ENC, MAC, DEK keys are all equal)",
     )
     ccm_command_common_parser.add_argument(
@@ -246,19 +248,19 @@ def parse_arguments():
     common_install_parser.add_argument(
         "-i",
         "--instance-aid",
-        type=_hexstring_to_int_list,
+        type=h2l,
         default="",
         help="Applet instance AID (in hex; default: applet's class AID)",
     )
     common_install_parser.add_argument(
         "--priv",
         default="00",
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="Applet privileges (in hex; default: 00)",
     )
     common_install_parser.add_argument(
         "--install-params",
-        type=_hexstring_to_int_list,
+        type=h2l,
         default="",
         help="Installation parameters (in hex; default: nothing)",
     )
@@ -314,18 +316,18 @@ def parse_arguments():
         "-p",
         "--package-aid",
         default="",
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="AID of the package",
     )
     load_parser.add_argument(
         "--asd-aid",
-        type=_hexstring_to_int_list,
+        type=h2l,
         default=[],
         help="Associated Security Domain AID (in hex; default: CM/current-SD AID)",
     )
     load_parser.add_argument(
         "--load-params",
-        type=_hexstring_to_int_list,
+        type=h2l,
         default="",
         help="load parameters (in hex; optional)",
     )
@@ -362,7 +364,7 @@ def parse_arguments():
         "-c",
         "--applet-class-aid",
         default="",
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="AID of the applet class for installation (option when --install is used)",
     )
     load_parser.add_argument(
@@ -383,7 +385,7 @@ def parse_arguments():
     install_parser.add_argument(
         "-p",
         "--package-aid",
-        type=_hexstring_to_int_list,
+        type=h2l,
         required=True,
         help="AID of the package (in hex)",
     )
@@ -391,7 +393,7 @@ def parse_arguments():
         "-c",
         "--applet-class-aid",
         required=True,
-        type=_hexstring_to_int_list,
+        type=h2l,
         help="Applet class AID (mandatory when installing an applet from a preloaded package; optional otherwise)",
     )
 
@@ -402,7 +404,7 @@ def parse_arguments():
         parents=[common_parser, ccm_command_common_parser],
     )
     delete_parser.add_argument(
-        "aid", type=_hexstring_to_int_list, help="AID of the applet/package to delete"
+        "aid", type=h2l, help="AID of the applet/package to delete"
     )
 
     # Script command
@@ -444,13 +446,9 @@ def get_CAP_summary_info(file_path):
             cap2json = CAP2JSON()
             json_cap = cap2json.parse(file_path)
 
-        package_aid = list(
-            bytes.fromhex(
-                json_cap["Header.cap"]
-                .get("package", {})
-                .get("AID", "")  # Compact Format
-                or json_cap["Header.cap"].get("CAP_AID", "")  # Extended Format
-            )
+        package_aid = h2l(
+            json_cap["Header.cap"].get("package", {}).get("AID", "")  # Compact Format
+            or json_cap["Header.cap"].get("CAP_AID", "")  # Extended Format
         )
 
         package_version = json_cap["Header.cap"].get("package", {}).get(
@@ -458,13 +456,13 @@ def get_CAP_summary_info(file_path):
         ) or json_cap["Header.cap"].get("CAP_version-u2", "")
 
         applets_aid = [
-            list(bytes.fromhex(applet["AID"]))
+            h2l(applet["AID"])
             for applet in json_cap.get("Applet.cap", {}).get("applets", [])
         ]
 
         imported_packages = [
             {
-                "aid": list(bytes.fromhex(package["AID"])),
+                "aid": h2l(package["AID"]),
                 "version": package["version-u2"],
             }
             for package in json_cap.get("Import.cap", {}).get("packages", [])
@@ -498,7 +496,7 @@ def print_cap_summary_info(file):
     if package_aid:
         print("Package:")
         version = cap_info.get("package_version", "N/A")
-        print(f"\t- {bytes(package_aid).hex().upper()} (v{version})\n")
+        print(f"\t- {bytes(package_aid).hex().upper()} (v{version})")
         print()
 
     applets_aid = cap_info.get("applets_aid")
@@ -536,6 +534,7 @@ def main():
 
     ccm = CCM(card_connection)
 
+    # Perform Mutual Auth if neccessary
     if args.command or args.secure_apdu or args.list:
 
         sec_level = (
@@ -566,6 +565,7 @@ def main():
             card_connection.disconnect()
             return False
 
+    # Command Dispathcer
     match args.command:
         case "auth":
             pass  # already done above
@@ -580,7 +580,7 @@ def main():
                 )
                 sys.exit(1)
 
-            loaded_succesfully = ccm.load_cap(
+            loaded_succesfully = ccm.load_file(
                 args.file,
                 package_aid,
                 args.asd_aid,  # associate security domain
