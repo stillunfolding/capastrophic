@@ -517,6 +517,143 @@ def print_cap_summary_info(file):
         print()
 
 
+def handle_interactive_mode(
+    card_connection,
+    ccm,
+    reader_name,
+    sec_level,
+    static_enc,
+    static_mac,
+    static_dek,
+    sd_aid,
+):
+    interactive_help_text = """
+    === Interactive Mode ===
+    Enter APDU commands as hexadecimal strings and press Enter.
+    Input is case-insensitive. Non-hex characters will be ignored.
+
+    Additionally, following commands can be used. Command arguments are cached, once provided,
+    they can be omitted in future calls.
+
+    Available Commands:
+    auth / a                             - Perform mutual authentication
+    load / ld [file] [pkg-aid]           - Load a CAP file (arguments optional after first use)
+    install / i [pkg] [class] [instance] - Install an applet with AIDs (arguments optional after first use)
+    list / ls                            - List installed applets
+    delete / d [AID]                     - Delete an applet by AID (optional after first use)
+    quit / q                             - Exit interactive mode
+    """
+    print(interactive_help_text)
+
+    # Stores the most recently provided arguments for commands.
+    # If the client omits arguments in subsequent commands, these are reused.
+    last_args = {}
+
+    while True:
+        try:
+            user_input = input(">> ").strip()
+            if not len(user_input):
+                continue
+
+            # Let's check for commands first!
+            if user_input.lower() in {"q", "quit"}:
+                print("Exiting interactive mode.")
+                break  # break from while loop!
+
+            elif user_input.lower() in {"?", "help", "h"}:
+                print(interactive_help_text)
+                continue
+
+            elif user_input.lower() in {"a", "auth"}:
+                ccm.mutual_auth(sec_level, static_enc, static_mac, static_dek, sd_aid)
+                continue
+
+            elif user_input.lower().startswith(("ld", "load")):
+                # Expected input: ld|load [file-path] [package-aid]
+                parts = user_input.split()
+                cmd = parts[0]
+                args = parts[1:]
+
+                # Update cached args if provided
+                if len(args) >= 1:
+                    last_args["ld_file"] = args[0]
+                if len(args) >= 2:
+                    last_args["ld_package_aid"] = args[1]
+
+                # Use cached args if missing
+                file = last_args.get("ld_file")
+                package_aid = h2l(last_args.get("ld_package_aid"))
+
+                if file and package_aid:
+                    ccm.load_file(file, package_aid)
+                else:
+                    logger.error(
+                        "Both file path and package AID must be provided at least once before using 'load' with missing arguments."
+                    )
+
+                continue
+
+            elif user_input.lower().startswith(("i", "install")):
+                # Expected input: i|install [package-AID] [class-AID] [instance-AID]
+                parts = user_input.split()
+                cmd = parts[0]
+                args = parts[1:]
+
+                # Update cached args if provided
+                if len(args) >= 1:
+                    last_args["i_package_aid"] = args[0]
+                if len(args) >= 2:
+                    last_args["i_class_aid"] = args[1]
+                    last_args["i_instance_aid"] = last_args["i_class_aid"]
+                if len(args) >= 3:
+                    last_args["i_instance_aid"] = args[2]
+
+                # Use cached args if missing
+                package_aid = h2l(last_args.get("i_package_aid"))
+                class_aid = h2l(last_args.get("i_class_aid"))
+                instance_aid = h2l(last_args.get("i_instance_aid"))
+
+                if package_aid and class_aid and instance_aid:
+                    ccm.install_applet(package_aid, class_aid, instance_aid)
+                else:
+                    logger.error(
+                        "Both package and class AIDs (and optionally instance AID )must be provided at least once before using 'install' with missing arguments."
+                    )
+
+                continue
+
+            elif user_input.lower() in {"ls", "list"}:
+                ccm.list_content()
+                continue
+
+            elif user_input.lower().startswith(("d", "delete")):
+                aid = h2l(user_input.split(" ", 1)[1])
+                ccm.delete_content(aid)
+                continue
+
+            hex_string = clean_hex_string(user_input.lower().replace("0x", ""))
+            ccm.send_apdu(h2l(hex_string))
+
+        except ValueError:
+            logger.error(
+                "Invalid APDU: "
+                + " ".join(
+                    f'{hex_string[i:i+2] if len(hex_string[i:i+2]) == 2 else hex_string[i:i+1] + "?"}'
+                    for i in range(0, len(hex_string), 2)
+                )
+            )
+
+        except Exception:
+            logger.error("APDU transmission failed! Unknown error!")
+            logger.info("Automatic card connection reset.")
+            card_connection.disconnect()
+            if not card_connection.connect(reader_name):
+                return False
+            ccm.card_connection = card_connection
+
+        print()
+
+
 def main():
     args = parse_arguments()
     settings = {} if args.skip_settings else load_settings()
@@ -527,6 +664,34 @@ def main():
         print_cap_summary_info(args.file)
         return
 
+    # Let's set these variables here for both command dispatcher use cases and the Interactive handler use cases.
+    sec_level = (
+        args.sec_level
+        if args.sec_level is not None
+        else settings.get("common", {}).get("sec_level", 1)
+    )
+
+    static_enc = (
+        args.key_enc
+        or args.key
+        or h2b(settings.get("common", {}).get("key_enc", const.KEY_40_4F_16B.hex()))
+    )
+
+    static_mac = (
+        args.key_mac
+        or args.key
+        or h2b(settings.get("common", {}).get("key_mac", const.KEY_40_4F_16B.hex()))
+    )
+
+    static_dek = (
+        args.key_dek
+        or args.key
+        or h2b(settings.get("common", {}).get("key_dek", const.KEY_40_4F_16B.hex()))
+    )
+
+    sd_aid = args.sd_aid or settings.get("common", {}).get("sd_aid", [])
+
+    # Reader and CCM setup/initialization
     card_connection = CardReader()
     reader_name = args.reader or settings.get("common", {}).get("reader", "")
     if not card_connection.connect(reader_name):
@@ -537,30 +702,12 @@ def main():
     # Perform Mutual Auth if neccessary
     if args.command or args.secure_apdu or args.list:
 
-        sec_level = (
-            args.sec_level
-            if args.sec_level is not None
-            else settings.get("common", {}).get("sec_level", 1)
-        )
-
         if not ccm.mutual_auth(
-            sec_level=sec_level,
-            static_enc=args.key_enc
-            or args.key
-            or bytes.fromhex(
-                settings.get("common", {}).get("key_enc", const.KEY_40_4F_16B.hex())
-            ),
-            static_mac=args.key_mac
-            or args.key
-            or bytes.fromhex(
-                settings.get("common", {}).get("key_mac", const.KEY_40_4F_16B.hex())
-            ),
-            static_dek=args.key_dek
-            or args.key
-            or bytes.fromhex(
-                settings.get("common", {}).get("key_dek", const.KEY_40_4F_16B.hex())
-            ),
-            sd_aid=args.sd_aid or settings.get("common", {}).get("sd_aid", []),
+            sec_level,
+            static_enc,
+            static_mac,
+            static_dek,
+            sd_aid,
         ):
             card_connection.disconnect()
             return False
@@ -672,43 +819,17 @@ def main():
 
     # handle "-I/--interactive"
     if args.interactive:
-        print()
-        print("::: Interactive mode: Enter APDUs in hex strings and press Enter.")
-        print("::: Input is case-insensitive. Any non-hex characters will be ignored.")
-        print("::: To exit, type 'q' or 'quit'.\n")
+        handle_interactive_mode(
+            card_connection,
+            ccm,
+            reader_name,
+            sec_level,
+            static_enc,
+            static_mac,
+            static_dek,
+            sd_aid,
+        )
 
-        while True:
-            try:
-                user_input = input(">> ").lower().replace("0x", "").strip()
-
-                if not len(user_input):
-                    continue
-
-                if user_input.lower() in {"q", "quit"}:
-                    print("Exiting interactive mode.")
-                    break
-
-                hex_string = clean_hex_string(user_input)
-                ccm.send_apdu(list(bytes.fromhex(hex_string)))
-
-            except ValueError:
-                logger.error(
-                    "Invalid APDU: "
-                    + " ".join(
-                        f'{hex_string[i:i+2] if len(hex_string[i:i+2]) == 2 else hex_string[i:i+1] + "?"}'
-                        for i in range(0, len(hex_string), 2)
-                    )
-                )
-
-            except Exception:
-                logger.error("APDU transmission failed! Unknown error!")
-                logger.info("Automatic card connection reset.")
-                card_connection.disconnect()
-                if not card_connection.connect(reader_name):
-                    return False
-                ccm.card_connection = card_connection
-
-            print()
     return True
 
 
