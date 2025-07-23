@@ -13,6 +13,8 @@ Capastrophic is a JCVM training [and testing] toolkit designed specifically for 
 ## Installation
 Except for the `ccm.py` (Card Content Manager) tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
 
+Note: the `readline` module is an optional dependency that enhances the interactive command-line experience by adding features like command history, line editing, and keyboard shortcuts (e.g. arrow keys for navigation). While it's built-in on most Unix-based systems (Linux/macOS), Windows users will need to install it manually. To enable readline on Windows, you can install the `pyreadline3` package.
+
 > [!IMPORTANT]
 > **Python 3.10 or newer is required.**
 >
@@ -271,9 +273,20 @@ user@pc:~/capastrophic$ ./ccm.py --secure-apdu -I
 2025-07-16 12:54:16     INFO    APDU Cmd ---> 84 82 01 00 10 F0 96 10 3D 79 56 92 D3 D9 96 05 A6 EE C3 F8 4B
 2025-07-16 12:54:16     INFO    APDU Res <--- 90 00
 
-::: Interactive mode: Enter APDUs in hex strings and press Enter.
-::: Input is case-insensitive. Any non-hex characters will be ignored.
-::: To exit, type 'q' or 'quit'.
+=== Interactive Mode ===
+Enter APDU commands as hexadecimal strings and press Enter.
+Input is case-insensitive. Non-hex characters will be ignored.
+
+Additionally, following commands can be used. Command arguments are cached, once provided,
+they can be omitted in future calls.
+
+Available Commands:
+auth / a                             - Perform mutual authentication
+load / ld [file] [pkg-aid]           - Load a CAP file (arguments optional after first use)
+install / i [pkg] [class] [instance] - Install an applet with AIDs (arguments optional after first use)
+list / ls                            - List installed applets
+delete / d [AID]                     - Delete an applet by AID (optional after first use)
+quit / q                             - Exit interactive mode
 
 >> 80F2400000
 2025-07-16 12:55:00     INFO    APDU Cmd ---> 84 F2 40 00 08 7C D4 E2 D3 A6 31 A6 E5

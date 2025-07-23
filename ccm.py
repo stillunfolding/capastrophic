@@ -1,18 +1,20 @@
 #!/usr/bin/python3
 
 import argparse
+import glob
 import json
 import logging
 import os
 import sys
+import textwrap
 from datetime import datetime
-from utils.cardreader import CardReader
-from utils.gpagent import GPAgent
-from utils.const import const
-from json2cap import JSON2CAP, clean_hex_string
-from cap2json import CAP2JSON, resolve_package_name
 from pathlib import Path
-import glob
+
+from cap2json import CAP2JSON, resolve_package_name
+from json2cap import JSON2CAP, clean_hex_string
+from utils.cardreader import CardReader
+from utils.const import const
+from utils.gpagent import GPAgent
 
 try:
     import readline  # Works natively on Unix; use pyreadline3 on Windows
@@ -556,7 +558,7 @@ def handle_interactive_mode(
     static_dek,
     sd_aid,
 ):
-    interactive_help_text = """
+    interactive_help_text = textwrap.dedent("""
     === Interactive Mode ===
     Enter APDU commands as hexadecimal strings and press Enter.
     Input is case-insensitive. Non-hex characters will be ignored.
@@ -571,7 +573,7 @@ def handle_interactive_mode(
     list / ls                            - List installed applets
     delete / d [AID]                     - Delete an applet by AID (optional after first use)
     quit / q                             - Exit interactive mode
-    """
+    """)
     print(interactive_help_text)
 
     # Stores the most recently provided arguments for commands.

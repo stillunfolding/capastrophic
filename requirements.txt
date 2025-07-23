@@ -1,2 +1,3 @@
 pycryptodome
 pyscard
+pyreadline3; platform_system == "Windows"
