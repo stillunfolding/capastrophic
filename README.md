@@ -13,7 +13,7 @@ Capastrophic is a JCVM training [and testing] toolkit designed specifically for 
 ## Installation
 Except for the `ccm.py` (Card Content Manager) tool, which requires the `pyscard` and `pycryptodome` libraries for communication with the card and implementing the SCP02/SCP03 protocols, respectively, all other tools in this project are developed solely using Python’s built-in features and do not depend on any external libraries.
 
-Note: the `readline` module is an optional dependency that enhances the interactive command-line experience by adding features like command history, line editing, and keyboard shortcuts (e.g. arrow keys for navigation). While it's built-in on most Unix-based systems (Linux/macOS), Windows users will need to install it manually. To enable readline on Windows, you can install the `pyreadline3` package.
+Note: the `readline` module is an optional dependency that enhances the interactive command-line experience (`ccm.py` feature) by adding features like command history, line editing, and keyboard shortcuts (e.g. arrow keys for navigation). While it's built-in on most Unix-based systems (Linux/macOS), Windows users will need to install it manually. To enable readline on Windows, you can install the `pyreadline3` package.
 
 > [!IMPORTANT]
 > **Python 3.10 or newer is required.**
