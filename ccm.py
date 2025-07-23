@@ -169,7 +169,7 @@ class CCM:  # Card Content Manager
         cap_aid,  # package AID in compact format
         applet_class_aid,  # applet AID within a package
         instance_aid,  # to be instanciated applet
-        priviledges=[],
+        priviledges=[0x00],
         install_params=[],
     ):
         return self.gpagent.install_applet(

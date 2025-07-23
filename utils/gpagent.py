@@ -484,7 +484,7 @@ class GPAgent:
         cap_aid,  # package AID in compact format
         class_aid,  # applet AID within a package
         instance_aid,  # to be instanciated applet
-        priviledges=[],
+        priviledges=[0x00],
         install_params=[],
     ):
 
