@@ -576,7 +576,7 @@ def handle_interactive_mode(
 
     # Stores the most recently provided arguments for commands.
     # If the client omits arguments in subsequent commands, these are reused.
-    last_args = {}
+    args_cache = {}
 
     while True:
         try:
@@ -605,13 +605,13 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    last_args["ld_file"] = args[0]
+                    args_cache["ld_file"] = args[0]
                 if len(args) >= 2:
-                    last_args["ld_package_aid"] = args[1]
+                    args_cache["ld_package_aid"] = args[1]
 
                 # Use cached args if missing
-                file = last_args.get("ld_file", "")
-                package_aid = h2l(last_args.get("ld_package_aid", ""))
+                file = args_cache.get("ld_file", "")
+                package_aid = h2l(args_cache.get("ld_package_aid", ""))
 
                 if file and package_aid:
                     is_json = file.lower().endswith("json")
@@ -631,17 +631,17 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    last_args["i_package_aid"] = args[0]
+                    args_cache["i_package_aid"] = args[0]
                 if len(args) >= 2:
-                    last_args["i_class_aid"] = args[1]
-                    last_args["i_instance_aid"] = last_args["i_class_aid"]
+                    args_cache["i_class_aid"] = args[1]
+                    args_cache["i_instance_aid"] = args_cache["i_class_aid"]
                 if len(args) >= 3:
-                    last_args["i_instance_aid"] = args[2]
+                    args_cache["i_instance_aid"] = args[2]
 
                 # Use cached args if missing
-                package_aid = h2l(last_args.get("i_package_aid", ""))
-                class_aid = h2l(last_args.get("i_class_aid", ""))
-                instance_aid = h2l(last_args.get("i_instance_aid", ""))
+                package_aid = h2l(args_cache.get("i_package_aid", ""))
+                class_aid = h2l(args_cache.get("i_class_aid", ""))
+                instance_aid = h2l(args_cache.get("i_instance_aid", ""))
 
                 if package_aid and class_aid and instance_aid:
                     ccm.install_applet(package_aid, class_aid, instance_aid)
@@ -664,10 +664,10 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    last_args["d_aid"] = args[0]
+                    args_cache["d_aid"] = args[0]
 
                 # Use cached args if missing
-                aid = h2l(last_args.get("d_aid", ""))
+                aid = h2l(args_cache.get("d_aid", ""))
 
                 if aid:
                     ccm.delete_content(aid)
