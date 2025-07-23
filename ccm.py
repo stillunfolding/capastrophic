@@ -12,6 +12,32 @@ from utils.const import const
 from json2cap import JSON2CAP, clean_hex_string
 from cap2json import CAP2JSON, resolve_package_name
 from pathlib import Path
+import glob
+
+try:
+    import readline  # Works natively on Unix; use pyreadline3 on Windows
+except ImportError:
+    # Readline not available. Arrow key history won't work.
+    readline = None
+
+
+# Setup completer for file paths
+def path_completer(text, state):
+    # Expand ~ and environment vars
+    expanded = os.path.expanduser(os.path.expandvars(text))
+    # Get all matching paths
+    matches = glob.glob(expanded + "*")
+    try:
+        return matches[state]
+    except IndexError:
+        return None
+
+
+# Register completer if readline is available
+if readline:
+    readline.set_completer_delims(" \t\n")  # Delimiters for completion
+    readline.set_completer(path_completer)
+    readline.parse_and_bind("tab: complete")  # Enable tab completion
 
 logger = logging.getLogger("CCM")
 logger.setLevel(logging.INFO)
