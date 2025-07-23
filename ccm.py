@@ -53,7 +53,7 @@ class CCM:  # Card Content Manager
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         json_file_name = os.path.splitext(os.path.basename(json_file_path))[0]
         cap_file_path = (
-            f"output{os.path.sep}CCM_generated_{timestamp}_{json_file_name}_json.cap"
+            f"output{os.path.sep}/ccm_generated/{timestamp}_{json_file_name}_json.cap"
         )
 
         try:

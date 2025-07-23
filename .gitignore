@@ -3,6 +3,9 @@ tests/*
 !tests/.gitkeep
 output/*
 !output/.gitkeep
+!output/ccm_generated
+output/ccm_generated/*
+!output/ccm_generated/.gitkeep
 __pycache__/
 sdks/*
 specs/*
