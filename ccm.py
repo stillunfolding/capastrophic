@@ -165,6 +165,9 @@ class CCM:  # Card Content Manager
             deprecated_data_structure
         )
 
+        if not (applications_info or packages_info):
+            return
+
         print()
         print("::: Card Content :::\n")
         for applet in applications_info:

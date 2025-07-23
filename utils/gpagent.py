@@ -542,7 +542,7 @@ class GPAgent:
 
         if not self.is_mutually_authenticated:
             logger.error("List Content failed; Mutual Auth is required!")
-            return None
+            return [], []
 
         # data type constains
         P1_ISD_INFO = 0x80
