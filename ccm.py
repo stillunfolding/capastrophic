@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import atexit
 import glob
 import json
 import logging
@@ -35,11 +36,21 @@ def path_completer(text, state):
         return None
 
 
+HISTORY_FILE = os.path.expanduser(".ccm_history")
+
+try:
+    readline.read_history_file(HISTORY_FILE)
+except FileNotFoundError:
+    pass  # No history yet
+
 # Register completer if readline is available
 if readline:
     readline.set_completer_delims(" \t\n")  # Delimiters for completion
     readline.set_completer(path_completer)
     readline.parse_and_bind("tab: complete")  # Enable tab completion
+    # Ensure history is saved on exit
+    atexit.register(readline.write_history_file, HISTORY_FILE)
+
 
 logger = logging.getLogger("CCM")
 logger.setLevel(logging.INFO)
@@ -558,7 +569,8 @@ def handle_interactive_mode(
     static_dek,
     sd_aid,
 ):
-    interactive_help_text = textwrap.dedent("""
+    interactive_help_text = textwrap.dedent(
+        """
     === Interactive Mode ===
     Enter APDU commands as hexadecimal strings and press Enter.
     Input is case-insensitive. Non-hex characters will be ignored.
@@ -573,7 +585,8 @@ def handle_interactive_mode(
     list / ls                            - List installed applets
     delete / d [AID]                     - Delete an applet by AID (optional after first use)
     quit / q                             - Exit interactive mode
-    """)
+    """
+    )
     print(interactive_help_text)
 
     # Stores the most recently provided arguments for commands.

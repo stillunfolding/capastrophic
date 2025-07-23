@@ -10,3 +10,4 @@ __pycache__/
 sdks/*
 specs/*
 applets/HelloWorld/build/
+.ccm_history
