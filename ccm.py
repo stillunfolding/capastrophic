@@ -222,28 +222,28 @@ class CCM:  # Card Content Manager
             deprecated_data_structure
         )
 
-        if not print_result or not (applications_info or packages_info):
-            return applications_info, packages_info
-
-        print()
-        print("::: Card Content :::\n")
-        for applet in applications_info:
-            aid, lifecycle, privilege, assiciated_package = applet
-            app_type = "APP" if "Security Domain" not in privilege else "SD"
-            print(
-                f"{app_type}: {bytes(aid).hex().upper()} (LC: {lifecycle}, Priv: {privilege})\n"
-            )
-            if assiciated_package:
-                print(f"\tPKG: {bytes(assiciated_package).hex().upper()}")
-
-        for package in packages_info:
-            aid, lifecycle, applet_classes_aids, version = package
-            print(
-                f"PKG: {bytes(aid).hex().upper()} (LC: {lifecycle}, Version: {version})"
-            )
-            for aid in applet_classes_aids:
-                print(f"\tAPP: {bytes(aid).hex().upper()}")
+        if print_result and (applications_info or packages_info):
             print()
+            print("::: Card Content :::\n")
+            for applet in applications_info:
+                aid, lifecycle, privilege, assiciated_package = applet
+                app_type = "APP" if "Security Domain" not in privilege else "SD"
+                print(
+                    f"{app_type}: {bytes(aid).hex().upper()} (LC: {lifecycle}, Priv: {privilege})\n"
+                )
+                if assiciated_package:
+                    print(f"\tPKG: {bytes(assiciated_package).hex().upper()}")
+
+            for package in packages_info:
+                aid, lifecycle, applet_classes_aids, version = package
+                print(
+                    f"PKG: {bytes(aid).hex().upper()} (LC: {lifecycle}, Version: {version})"
+                )
+                for aid in applet_classes_aids:
+                    print(f"\tAPP: {bytes(aid).hex().upper()}")
+                print()
+
+        return applications_info, packages_info
 
     def delete_content(self, aid):
         return self.gpagent.delete_content(aid)
