@@ -40,6 +40,7 @@ COMMANDS = [
     "quit",
     "cache",
     "clean",
+    "capinfo",
     "<APDU>",
 ]
 
@@ -613,13 +614,16 @@ def handle_interactive_mode(
     they can be omitted in future calls.
 
     Available Commands:
+    capinfo / ci [file]                  - Print generic CAP/JSON file info
     auth / a                             - Perform mutual authentication
     load / ld [file] [pkg-aid]           - Load a CAP file (arguments optional after first use)
     install / i [pkg] [class] [instance] - Install an applet with AIDs (arguments optional after first use)
     list / ls / l                        - List installed applets
     delete / d [AID]                     - Delete an applet by AID (optional after first use)
+    **
     cache / c                            - Print current cached arguments
     clean / cc                           - Clean cached arguments
+    **
     quit / q                             - Exit interactive mode
     help / h / ?                         - Print this help message
     """
@@ -726,6 +730,27 @@ def handle_interactive_mode(
                 else:
                     logger.error(
                         "AID must be provided at least once before using 'delete' with missing argument."
+                    )
+
+                continue
+
+            elif user_input.lower().startswith(("ci", "capinfo")):
+                # Expected input: ci|capinfo [file]
+                parts = user_input.split()
+                cmd = parts[0]
+                args = parts[1:]
+
+                # Update cached args if provided
+                if len(args) >= 1:
+                    args_cache["capinfo:file"] = args[0]
+
+                file = args_cache["capinfo:file"]
+
+                if file:
+                    print_cap_summary_info(file)
+                else:
+                    logger.error(
+                        "file must be provided at least once before using 'capinfo' with missing argument."
                     )
 
                 continue
