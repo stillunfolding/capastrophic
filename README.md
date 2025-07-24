@@ -281,12 +281,18 @@ Additionally, following commands can be used. Command arguments are cached, once
 they can be omitted in future calls.
 
 Available Commands:
+capinfo / ci [file]                  - Print generic CAP/JSON file info
 auth / a                             - Perform mutual authentication
 load / ld [file] [pkg-aid]           - Load a CAP file (arguments optional after first use)
 install / i [pkg] [class] [instance] - Install an applet with AIDs (arguments optional after first use)
-list / ls                            - List installed applets
+list / ls / l                        - List installed applets
 delete / d [AID]                     - Delete an applet by AID (optional after first use)
+**
+cache / c                            - Print current cached arguments
+clean / cc                           - Clean cached arguments
+**
 quit / q                             - Exit interactive mode
+help / h / ?                         - Print this help message
 
 >> 80F2400000
 2025-07-16 12:55:00     INFO    APDU Cmd ---> 84 F2 40 00 08 7C D4 E2 D3 A6 31 A6 E5
