@@ -753,7 +753,7 @@ def handle_interactive_mode(
                 if len(args) >= 1:
                     args_cache["capinfo:file"] = args[0]
 
-                file = args_cache["capinfo:file"]
+                file = args_cache.get("capinfo:file", "")
 
                 if file:
                     print_cap_summary_info(file)
