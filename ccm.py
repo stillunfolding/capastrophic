@@ -6,6 +6,7 @@ import glob
 import json
 import logging
 import os
+import signal
 import sys
 import textwrap
 from datetime import datetime
@@ -24,6 +25,14 @@ try:
 except ImportError:
     # Readline not available. Arrow key history won't work.
     readline = None
+
+
+# For interactive mode loop
+def ignore_ctrl_c(signum, frame):
+    print("Ctrl+C was pressed, enter q/quit to exit Interactive mode")
+
+
+signal.signal(signal.SIGINT, ignore_ctrl_c)
 
 
 # File to persist interactive mode command history
