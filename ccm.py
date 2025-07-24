@@ -217,13 +217,13 @@ class CCM:  # Card Content Manager
             cap_aid, applet_class_aid, instance_aid, priviledges, install_params
         )
 
-    def list_content(self, deprecated_data_structure=False):
+    def list_content(self, deprecated_data_structure=False, print_result=True):
         applications_info, packages_info = self.gpagent.list_content(
             deprecated_data_structure
         )
 
-        if not (applications_info or packages_info):
-            return
+        if not print_result or not (applications_info or packages_info):
+            return applications_info, packages_info
 
         print()
         print("::: Card Content :::\n")
