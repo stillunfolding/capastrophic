@@ -10,12 +10,14 @@ import sys
 import textwrap
 from datetime import datetime
 from pathlib import Path
+from pprint import pprint
 
 from cap2json import CAP2JSON, resolve_package_name
 from json2cap import JSON2CAP, clean_hex_string
 from utils.cardreader import CardReader
 from utils.const import const
 from utils.gpagent import GPAgent
+
 
 try:
     import readline  # Works natively on Unix; use pyreadline3 on Windows
@@ -24,34 +26,63 @@ except ImportError:
     readline = None
 
 
-# Setup completer for file paths
-def path_completer(text, state):
-    if readline.get_line_buffer() == "":
-        matches = ["help", "auth", "load", "install", "list", "delete", "quit", "<APDU>"]
+# File to persist interactive mode command history
+HISTORY_FILE = os.path.expanduser(".ccm_history")
+
+# Define available commands for command completion within interactiv mode
+COMMANDS = [
+    "help",
+    "auth",
+    "load",
+    "install",
+    "list",
+    "delete",
+    "quit",
+    "cache",
+    "clean",
+    "<APDU>",
+]
+
+
+def path_completer(text: str, state: int) -> str | None:
+    """
+    Completes input for commands or filesystem paths depending on context.
+    """
+    # Only show commands at the start of the line
+    if readline.get_line_buffer().strip() == text:
+        options = [cmd for cmd in COMMANDS if cmd.startswith(text)]
     else:
-        # Expand ~ and environment vars
-        expanded = os.path.expanduser(os.path.expandvars(text))
-        # Get all matching paths
-        matches = glob.glob(expanded + "*")
+        try:
+            expanded = os.path.expanduser(os.path.expandvars(text))
+            options = glob.glob(expanded + "*")
+        except Exception:
+            options = []
+
     try:
-        return matches[state]
+        return options[state]
     except IndexError:
         return None
 
 
-HISTORY_FILE = os.path.expanduser(".ccm_history")
+def setup_readline():
+    """
+    Initializes readline with history and tab completion.
+    """
+    if not readline:
+        return
 
-try:
-    readline.read_history_file(HISTORY_FILE)
-except FileNotFoundError:
-    pass  # No history yet
+    # Load history if available
+    try:
+        readline.read_history_file(HISTORY_FILE)
+    except FileNotFoundError:
+        pass
 
-# Register completer if readline is available
-if readline:
-    readline.set_completer_delims(" \t\n")  # Delimiters for completion
+    # Setup completion behavior
+    readline.set_completer_delims(" \t\n")
     readline.set_completer(path_completer)
-    readline.parse_and_bind("tab: complete")  # Enable tab completion
-    # Ensure history is saved on exit
+    readline.parse_and_bind("tab: complete")
+
+    # Save history on exit
     atexit.register(readline.write_history_file, HISTORY_FILE)
 
 
@@ -585,9 +616,12 @@ def handle_interactive_mode(
     auth / a                             - Perform mutual authentication
     load / ld [file] [pkg-aid]           - Load a CAP file (arguments optional after first use)
     install / i [pkg] [class] [instance] - Install an applet with AIDs (arguments optional after first use)
-    list / ls                            - List installed applets
+    list / ls / l                        - List installed applets
     delete / d [AID]                     - Delete an applet by AID (optional after first use)
+    cache / c                            - Print current cached arguments
+    clean / cc                           - Clean cached arguments
     quit / q                             - Exit interactive mode
+    help / h / ?                         - Print this help message
     """
     )
     print(interactive_help_text)
@@ -623,13 +657,13 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    args_cache["ld_file"] = args[0]
+                    args_cache["load:file"] = args[0]
                 if len(args) >= 2:
-                    args_cache["ld_package_aid"] = args[1]
+                    args_cache["load:package_aid"] = args[1]
 
                 # Use cached args if missing
-                file = args_cache.get("ld_file", "")
-                package_aid = h2l(args_cache.get("ld_package_aid", ""))
+                file = args_cache.get("load:file", "")
+                package_aid = h2l(args_cache.get("load:package_aid", ""))
 
                 if file and package_aid:
                     is_json = file.lower().endswith("json")
@@ -649,17 +683,17 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    args_cache["i_package_aid"] = args[0]
+                    args_cache["install:package_aid"] = args[0]
                 if len(args) >= 2:
-                    args_cache["i_class_aid"] = args[1]
-                    args_cache["i_instance_aid"] = args_cache["i_class_aid"]
+                    args_cache["install:class_aid"] = args[1]
+                    args_cache["install:instance_aid"] = args_cache["install:class_aid"]
                 if len(args) >= 3:
-                    args_cache["i_instance_aid"] = args[2]
+                    args_cache["install:instance_aid"] = args[2]
 
                 # Use cached args if missing
-                package_aid = h2l(args_cache.get("i_package_aid", ""))
-                class_aid = h2l(args_cache.get("i_class_aid", ""))
-                instance_aid = h2l(args_cache.get("i_instance_aid", ""))
+                package_aid = h2l(args_cache.get("install:package_aid", ""))
+                class_aid = h2l(args_cache.get("install:class_aid", ""))
+                instance_aid = h2l(args_cache.get("install:instance_aid", ""))
 
                 if package_aid and class_aid and instance_aid:
                     ccm.install_applet(package_aid, class_aid, instance_aid)
@@ -670,7 +704,7 @@ def handle_interactive_mode(
 
                 continue
 
-            elif user_input.lower() in {"ls", "list"}:
+            elif user_input.lower() in {"l", "ls", "list"}:
                 ccm.list_content()
                 continue
 
@@ -682,10 +716,10 @@ def handle_interactive_mode(
 
                 # Update cached args if provided
                 if len(args) >= 1:
-                    args_cache["d_aid"] = args[0]
+                    args_cache["delete:aid"] = args[0]
 
                 # Use cached args if missing
-                aid = h2l(args_cache.get("d_aid", ""))
+                aid = h2l(args_cache.get("delete:aid", ""))
 
                 if aid:
                     ccm.delete_content(aid)
@@ -696,12 +730,25 @@ def handle_interactive_mode(
 
                 continue
 
+            elif user_input.lower() in {"c", "cache"}:
+                pprint(args_cache)
+                continue
+
+            elif user_input.lower() in {"cc", "clean"}:
+                args_cache = {}
+                continue
+
             hex_string = clean_hex_string(user_input.lower().replace("0x", ""))
+            # after clean_hex_string, it can be empty!
+            if not hex_string:
+                raise ValueError
             ccm.send_apdu(h2l(hex_string))
 
         except ValueError:
             logger.error(
                 "Invalid APDU: "
+                + user_input
+                + " --> "
                 + " ".join(
                     f'{hex_string[i:i+2] if len(hex_string[i:i+2]) == 2 else hex_string[i:i+1] + "?"}'
                     for i in range(0, len(hex_string), 2)
@@ -720,6 +767,8 @@ def handle_interactive_mode(
 
 
 def main():
+    setup_readline()
+
     args = parse_arguments()
     settings = {} if args.skip_settings else load_settings()
 
