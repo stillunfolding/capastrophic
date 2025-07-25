@@ -691,7 +691,7 @@ def handle_interactive_mode(
                 args = parts[1:]
 
                 # Update cached args if provided
-                if len(args) >= 1:
+                if len(args) >= 1 and args[0] != "-":
                     args_cache["load:file"] = args[0]
                 if len(args) >= 2:
                     args_cache["load:package_aid"] = args[1]
@@ -717,9 +717,9 @@ def handle_interactive_mode(
                 args = parts[1:]
 
                 # Update cached args if provided
-                if len(args) >= 1:
+                if len(args) >= 1 and args[0] != "-":
                     args_cache["install:package_aid"] = args[0]
-                if len(args) >= 2:
+                if len(args) >= 2 and args[1] != "-":
                     args_cache["install:class_aid"] = args[1]
                     args_cache["install:instance_aid"] = args_cache["install:class_aid"]
                 if len(args) >= 3:
