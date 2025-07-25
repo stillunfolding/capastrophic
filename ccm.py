@@ -41,6 +41,7 @@ HISTORY_FILE = os.path.expanduser(".ccm_history")
 # Define available commands for command completion within interactiv mode
 COMMANDS = [
     "help",
+    "reset",
     "auth",
     "load",
     "install",
@@ -121,8 +122,24 @@ def h2l(hexstring):
 
 class CCM:  # Card Content Manager
     def __init__(self, card_connection):
-        self.card_connection = card_connection
+        self._card_connection = card_connection
+        self.gpagent = GPAgent(self._card_connection)
+
+    @property
+    def card_connection(self):
+        return self._card_connection
+
+    @card_connection.setter
+    def card_connection(self, card_connection):
+        self._card_connection = card_connection
+        self.gpagent = GPAgent(self._card_connection)
+
+    def reset_card(self, reader_name):
+        self.card_connection.disconnect()
+        if not self.card_connection.connect(reader_name):
+            return False
         self.gpagent = GPAgent(self.card_connection)
+        return True
 
     def send_apdu(self, apdu):
         # While we can send APDUs here using self.card_connection, it's
@@ -633,6 +650,7 @@ def handle_interactive_mode(
     cache / c                            - Print current cached arguments
     clean / cc                           - Clean cached arguments
     **
+    reset / r                            - Warm reset the card
     quit / q                             - Exit interactive mode
     help / h / ?                         - Print this help message
     """
@@ -656,6 +674,10 @@ def handle_interactive_mode(
 
             elif user_input.lower() in {"?", "help", "h"}:
                 print(interactive_help_text)
+                continue
+
+            elif user_input.lower() in {"r", "reset"}:
+                ccm.reset_card(reader_name)
                 continue
 
             elif user_input.lower() in {"a", "auth"}:
@@ -792,10 +814,7 @@ def handle_interactive_mode(
         except Exception:
             logger.error("APDU transmission failed! Unknown error!")
             logger.info("Automatic card connection reset.")
-            card_connection.disconnect()
-            if not card_connection.connect(reader_name):
-                return False
-            ccm.card_connection = card_connection
+            ccm.reset_card(reader_name)
 
         print()
 
